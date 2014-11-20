@@ -22,6 +22,7 @@
 
             var STACK = {};
 
+            // version
             this.version = "${version}";
 
             var Proto = this;
@@ -29,7 +30,7 @@
             /**
              * define
              */
-            Proto.define = function(id, deps, context) {
+            Proto.define = function(id, deps, factory) {
                 if (!isValidId(id)) {
                     throwError("invalid id: '" + id + "'.");
                     return false;
@@ -45,13 +46,13 @@
                 STACK[id] = {
                     executed: false,
                     deps: deps, // dependencies
-                    context: context
+                    factory: factory
                 };
 
             };
 
             /**
-             * execute a context function
+             * execute a factory function
              */
             Proto.require = function(id, callback) {
                 
@@ -59,21 +60,21 @@
                     var ret = null,
                         stack = get(id);
 
-                    if (stack && stack.context) {
-                        ret = stack.context;
+                    if (stack && stack.factory) {
+                        ret = stack.factory;
                     }
 
                     return ret;
                 };
 
                 var trigger = function() {
-                    var context = req();
+                    var factory = req();
 
                     if (isFN(callback)) {
-                        callback(context);
+                        callback(factory);
                     }
 
-                    return context;
+                    return factory;
                 };
 
                 if (DOM_READY || PAGE_READY) {
@@ -109,13 +110,13 @@
 
                 if (STACK[id]) {
                     var stack = STACK[id],
-                        context = stack.context;
+                        factory = stack.factory;
 
                     if (!stack.executed) {
                         stack.executed = true;
 
                         var deps = getDeps(stack.deps);
-                        STACK[id].context = getContext(stack.context, deps);
+                        STACK[id].factory = getFactory(stack.factory, deps);
 
                     }
 
@@ -187,7 +188,7 @@
                 STACK[str] = {
                     executed: true,
                     deps: [],
-                    context: ret
+                    factory: ret
                 };
 
                 return ret;
@@ -203,7 +204,7 @@
                     } else if (id === "require") {
                         holder.push(Proto.require);
                     } else if (STACK[id]) {
-                        holder.push(get(id).context);
+                        holder.push(get(id).factory);
                     } else if (isSelector(id)) {
                         holder.push(getSelectors(id));
                     } else {
@@ -217,7 +218,7 @@
                     } else if (id === "require") {
                         holder[id] = Proto.require;
                     } else if (STACK[id]) {
-                        holder[id] = get(id).context;
+                        holder[id] = get(id).factory;
                     } else {
                         holder[id] = null;
                     }
@@ -230,12 +231,12 @@
 
         }; // Modulr
 
-        function getContext(context, deps) {
+        function getFactory(factory, deps) {
             var ret = null;
-            if (isFN(context)) {
-                ret = context.apply(context, deps);
+            if (isFN(factory)) {
+                ret = factory.apply(factory, deps);
             } else {
-                ret = context;
+                ret = factory;
             }
 
             return ret;
