@@ -45,6 +45,7 @@
 
                 STACK[id] = {
                     executed: false,
+                    exports: {},
                     deps: deps, // dependencies
                     factory: factory
                 };
@@ -60,8 +61,8 @@
                     var ret = null,
                         stack = get(id);
 
-                    if (stack && stack.factory) {
-                        ret = stack.factory;
+                    if (stack) {
+                        ret = stack.exports || stack.factory;
                     }
 
                     return ret;
@@ -115,7 +116,7 @@
                     if (!stack.executed) {
                         stack.executed = true;
 
-                        var deps = getDeps(stack.deps);
+                        var deps = getDeps(id, stack.deps);
                         STACK[id].factory = getFactory(stack.factory, deps);
 
                     }
@@ -127,19 +128,19 @@
                 return ret;
             }
 
-            function getDeps(deps) {
+            function getDeps(modId, deps) {
                 var ret = [];
 
                 for (var i = 0; i < deps.length; i++) {
-                    var id = deps[i];
+                    var depId = deps[i];
 
-                    if (isArray(id)) {
-                        ret.push(generateArrDeps(id));
-                    } else if (typeof id === "string") {
-                        ret = setDeps(ret, id);
+                    if (isArray(depId)) {
+                        ret.push(generateArrDeps(depId, modId));
+                    } else if (typeof depId === "string") {
+                        ret = setDeps(ret, depId, modId);
                     } else {
                         log('dependency:');
-                        log(id);
+                        log(depId);
                         throwError("invalid dependency");
                     }
 
@@ -148,18 +149,18 @@
                 return ret;
             }
 
-            function generateArrDeps(arr) {
+            function generateArrDeps(arr, modId) {
 
                 var ret = {};
 
                 for (var i = 0; i < arr.length; i++) {
-                    var id = arr[i];
+                    var depId = arr[i];
 
-                    if (typeof id === "string") {
-                        ret = setDeps(ret, id);
+                    if (typeof depId === "string") {
+                        ret = setDeps(ret, depId, modId);
                     } else {
                         log('dependency:');
-                        log(id);
+                        log(depId);
                         throwError("invalid dependency");
                     }
 
@@ -169,7 +170,7 @@
 
             }
 
-            function getSelectors(str) {
+            function getSelectors(str, modId) {
                 
                 var arr = [],
                     patt = str.replace("**", "");
@@ -182,11 +183,12 @@
 
                 }
                 
-                var ret = generateArrDeps(arr);
+                var ret = generateArrDeps(arr, modId);
 
                 // create stack
                 STACK[str] = {
                     executed: true,
+                    exports: {},
                     deps: [],
                     factory: ret
                 };
@@ -195,32 +197,36 @@
 
             }
 
-            function setDeps(holder, id) {
+            function setDeps(holder, depId, modId) {
 
                 if (isArray(holder)) {
 
-                    if (id === "define") {
+                    if (depId === "define") {
                         holder.push(Proto.define);
-                    } else if (id === "require") {
+                    } else if (depId === "require") {
                         holder.push(Proto.require);
-                    } else if (STACK[id]) {
-                        holder.push(get(id).factory);
-                    } else if (isSelector(id)) {
-                        holder.push(getSelectors(id));
+                    } else if (depId === "exports") {
+                        holder.push(STACK[modId].exports);
+                    } else if (STACK[depId]) {
+                        holder.push(get(depId).factory);
+                    } else if (isSelector(depId)) {
+                        holder.push(getSelectors(depId, modId));
                     } else {
                         holder.push(null);
                     }
 
                 } else if (isObj(holder)) {
 
-                    if (id === "define") {
-                        holder[id] = Proto.define;
-                    } else if (id === "require") {
-                        holder[id] = Proto.require;
-                    } else if (STACK[id]) {
-                        holder[id] = get(id).factory;
+                    if (depId === "define") {
+                        holder[depId] = Proto.define;
+                    } else if (depId === "require") {
+                        holder[depId] = Proto.require;
+                    } else if (depId === "exports") {
+                        holder[depId]= STACK[modId].exports;
+                    } else if (STACK[depId]) {
+                        holder[depId] = get(depId).factory;
                     } else {
-                        holder[id] = null;
+                        holder[depId] = null;
                     }
 
                 }
@@ -263,7 +269,7 @@
 
         function isValidId(id) {
             var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
-            return (str.length > 0 && (str !== "require" || str !== "define") && str.indexOf("**") === -1) ? true : false;
+            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports" && str.indexOf("**") === -1) ? true : false;
         }
 
         function log() {
