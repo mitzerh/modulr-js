@@ -1,3 +1,3 @@
 Modulr
 ==========
-Custom AMD alternative to RequireJS
+Custom alternative to AMD (RequireJS). AMD w/o the "A". 
