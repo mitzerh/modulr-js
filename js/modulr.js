@@ -1,5 +1,5 @@
 /**
-* modulr-js v2.1.1 | 2014-11-20
+* modulr-js v0.1.0 | 2014-11-20
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -29,7 +29,7 @@
 
             var STACK = {};
 
-            this.version = "2.1.1";
+            this.version = "0.1.0";
 
             var Proto = this;
 
@@ -139,25 +139,10 @@
                 for (var i = 0; i < deps.length; i++) {
                     var id = deps[i];
 
-                    // TODO: SELECTORS
                     if (isArray(id)) {
-
                         ret.push(generateArrDeps(id));
-
                     } else if (typeof id === "string") {
-
-                        if (id === "define") {
-                            ret.push(Proto.define);
-                        } else if (id === "require") {
-                            ret.push(Proto.require);
-                        } else if (STACK[id]) {
-                            ret.push(get(id).context);
-                        } else if (isSelector(id)) {
-                            ret.push(getSelectors(id));
-                        } else {
-                            ret.push(null);
-                        }
-
+                        ret = setDeps(ret, id);
                     } else {
                         log('dependency:');
                         log(id);
@@ -174,21 +159,10 @@
                 var ret = {};
 
                 for (var i = 0; i < arr.length; i++) {
-
                     var id = arr[i];
 
                     if (typeof id === "string") {
-
-                        if (id === "define") {
-                            ret[id] = Proto.define;
-                        } else if (id === "require") {
-                            ret[id] = Proto.require;
-                        } else if (STACK[id]) {
-                            ret[id] = get(id).context;
-                        } else {
-                            ret[id] = null;
-                        }
-
+                        ret = setDeps(ret, id);
                     } else {
                         log('dependency:');
                         log(id);
@@ -227,6 +201,40 @@
 
             }
 
+            function setDeps(holder, id) {
+
+                if (isArray(holder)) {
+
+                    if (id === "define") {
+                        holder.push(Proto.define);
+                    } else if (id === "require") {
+                        holder.push(Proto.require);
+                    } else if (STACK[id]) {
+                        holder.push(get(id).context);
+                    } else if (isSelector(id)) {
+                        holder.push(getSelectors(id));
+                    } else {
+                        holder.push(null);
+                    }
+
+                } else if (isObj(holder)) {
+
+                    if (id === "define") {
+                        holder[id] = Proto.define;
+                    } else if (id === "require") {
+                        holder[id] = Proto.require;
+                    } else if (STACK[id]) {
+                        holder[id] = get(id).context;
+                    } else {
+                        holder[id] = null;
+                    }
+
+                }
+
+                return holder;
+
+            }
+
         }; // Modulr
 
         function getContext(context, deps) {
@@ -248,6 +256,10 @@
 
         function isFN(val) {
             return (typeof val === "function") ? true : false;
+        }
+
+        function isObj(val) {
+            return (typeof val === "object" && !isArray(val)) ? true : false;
         }
 
         function isArray(val) {
