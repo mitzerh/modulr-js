@@ -1,0 +1,16 @@
+# conf
+src/conf/
+
+# osx/win
+.DS_Store
+.thumbs.db
+
+# npm
+.nodemonignore
+npm-debug.log
+**/node_modules/
+
+# bower
+.bower-*/
+**/bower_components/
+

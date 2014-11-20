@@ -1,0 +1,31 @@
+{
+
+    "curly": true,
+    "eqeqeq": true,
+    "es3": true,
+    "multistr": true,
+
+    "latedef": "nofunc",
+    "noarg": true,
+    "noempty": true,
+    "nonew": true,
+    "unused": true,
+    "trailing": true,
+
+    "eqnull": true,
+    "evil": true,
+
+    "laxcomma": true,
+    "notypeof": true,
+    "smarttabs": true,
+    "sub": true,
+    "supernew": true,
+
+    "browser": true,
+
+    "maxerr": 10,
+
+    "-W098": true,
+    "-W044": true
+
+}
