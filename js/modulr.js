@@ -27,8 +27,10 @@
         var Modulr = function(CONFIG) {
 
             CONFIG = CONFIG || {};
+            // default context
+            CONFIG.context = CONFIG.context || "Modulr";
 
-            var CONTEXT = CONFIG.context || "Modulr";
+            var CONTEXT = CONFIG.context;
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
@@ -181,7 +183,7 @@
                 // for each paths, add baseUrl
                 // if (CONFIG.paths) {
                 //     for (var i in CONFIG.paths) {
-                //         CONFIG.paths[i] = setConfigPaths(CONFIG.baseUrl, CONFIG.paths[i]);
+                //         CONFIG.paths[i] = setConfigPath(CONFIG.baseUrl, CONFIG.paths[i]);
                 //     }
                 // }
 
@@ -341,11 +343,43 @@
 
             }
 
-            function loadInstanceScript(id, src, callback) {
+            function loadInstanceDependencies(deps, callback) {
+
+                var arr = [];
+                for (var name in deps) {
+                    arr.push(deps[name]);
+                }
+
+                var next = true;
+
+                LoadAttempt(function(){
+
+                    var len = arr.length;
+
+                    if (next && len > 0) {
+                        next = true;
+                        loadInstanceScript(setConfigPath(CONFIG.baseUrl, arr.shift()) + ".js", function(){
+                            next = true;
+                        });
+                    }
+
+                    return (len === 0) ? true : false;
+
+                }, function(){
+
+                    callback();
+
+                });
+
+
+            }
+
+            function loadInstanceScript(src, callback) {
 
                 var loaded = false,
                     script = document.createElement("script");
 
+                script.setAttribute("data-modulr-context", CONTEXT);
                 script.type = "text/javascript";
                 script.async = true;
                 script.src = src;
@@ -355,7 +389,7 @@
                       callback();
                     }
                 };
-                document.getElementsByTagName("head")[0].appendChild(s);
+                document.getElementsByTagName("head")[0].appendChild(script);
 
             }
 
@@ -406,7 +440,7 @@
             return loc.protocol + "//" + (loc.host || loc.hostname) + path;
         }
 
-        function setConfigPaths(baseUrl, path) {
+        function setConfigPath(baseUrl, path) {
             baseUrl = rtrimSlash(baseUrl);
             path = trimSlash(path);
             return [baseUrl, path].join("/");
@@ -415,7 +449,14 @@
         /**
          * helper functions
          */
-        
+        function cloneArr(arr) {
+            var ret = [];
+            for (var i  = 0; i < arr.length; i++) {
+                ret.push(arr[i]);
+            }
+            return ret;
+        }
+
         function trimSlash(val) {
             val = rtrimSlash(ltrimSlash(val));
             return val;
