@@ -28,7 +28,7 @@ module.exports = function(grunt) {
             dist: {
 
                 src: 'src/modulr.js',
-                dest: 'src/modulr.js.tmp',
+                dest: 'js/modulr.js',
                 options: {
                     process: function (content, srcpath) {
                         
@@ -36,6 +36,11 @@ module.exports = function(grunt) {
 
                         content = content.replace('\/\/inclue:${domready}', (function(){
                             var ret = grunt.file.read(__dirname + '/src/domready.tmp');
+                            return ret;
+                        }()));
+
+                        content = content.replace('\/\/inclue:${loadAttempt}', (function(){
+                            var ret = grunt.file.read(__dirname + '/src/loadAttempt.tmp');
                             return ret;
                         }()));
 
@@ -49,20 +54,6 @@ module.exports = function(grunt) {
 
             }
             
-        },
-
-        concat: {
-
-            dist: {
-                
-                files: {
-                    //'js/startup.js': ['src/startup.js.tmp', 'src/domready.js']
-                    'js/modulr.js': ['src/modulr.js.tmp']
-                }
-                
-
-            }
-
         },
 
         jshint: {
@@ -91,13 +82,14 @@ module.exports = function(grunt) {
 
             },
 
-            domready: {
+            includes: {
 
                 option: {
                     mangle: true
                 },
                 files: {
-                    'src/domready.tmp': 'src/domready.js'
+                    'src/domready.tmp': 'src/domready.js',
+                    'src/loadAttempt.tmp': 'src/loadAttempt.js'
                 }
 
             }
@@ -109,7 +101,7 @@ module.exports = function(grunt) {
     // load npm's
     require("matchdep").filterDev("grunt-*").forEach(grunt.loadNpmTasks);
 
-    grunt.registerTask('default', ['clean:dest', 'uglify:domready', 'jshint', 'copy:dist', 'concat', 'clean:temp', 'uglify:dist']);
+    grunt.registerTask('default', ['clean:dest', 'uglify:includes', 'jshint', 'copy:dist', 'uglify:dist', 'clean:temp']);
 
     grunt.initConfig(config);
 

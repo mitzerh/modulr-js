@@ -4,12 +4,13 @@
 
 }(window,
 
-    (function(DomReady){
+    (function(DomReady, LoadAttempt){
 
         var CONST = {};
         CONST.prefix = "[Modulr]";
 
-        var DOM_READY = false,
+        var MODULR_STACK = {},
+            DOM_READY = false,
             PAGE_READY = false;
 
         DomReady(function(){
@@ -20,7 +21,21 @@
 
             CONFIG = CONFIG || {};
 
-            var STACK = {};
+            var CONTEXT = CONFIG.context || "Modulr";
+
+            // cannot instantiate same context
+            if (MODULR_STACK[CONTEXT]) {
+                throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
+            }
+
+            MODULR_STACK[CONTEXT] = {
+                instance: this,
+                stack: {}
+            };
+
+            var STACK = MODULR_STACK[CONTEXT].stack,
+                INSTANCE_INIT = false,
+                INSTANCE_READY = false;
 
             // version
             this.version = "${version}";
@@ -28,27 +43,40 @@
             var Proto = this;
 
             /**
+             * config setting (post-instantiation)
+             */
+            Proto.config = function(config) {
+                CONFIG = config;
+            };
+
+            /**
+             * get current instance's config
+             */
+            Proto.getConfig = function() {
+                return CONFIG;
+            };
+
+            /**
              * define
              */
             Proto.define = function(id, deps, factory) {
                 if (!isValidId(id)) {
                     throwError("invalid id: '" + id + "'.");
-                    return false;
                 }
 
-                if (STACK[id]) {
-                    throwError("id: '" + id + "': - already exists.");
-                    return false;
+                // only define if not yet defined
+                if (!STACK[id]) {
+
+                    deps = deps || [];
+
+                    STACK[id] = {
+                        executed: false,
+                        exports: {},
+                        deps: deps, // dependencies
+                        factory: factory
+                    };
+
                 }
-
-                deps = deps || [];
-
-                STACK[id] = {
-                    executed: false,
-                    exports: {},
-                    deps: deps, // dependencies
-                    factory: factory
-                };
 
             };
 
@@ -56,6 +84,12 @@
              * execute a factory function
              */
             Proto.require = function(id, callback) {
+
+                // instantiate on initial require()
+                if (!INSTANCE_INIT) {
+                    INSTANCE_INIT = true;
+                    initializeInstance();
+                }
                 
                 var req = function() {
                     var ret = null,
@@ -71,19 +105,28 @@
                 var trigger = function() {
                     var factory = req();
 
-                    if (isFN(callback)) {
-                        callback(factory);
+                    if (isArray(id)) {
+                        if (isFN(callback)) {
+                            callback();
+                        }
+                    } else {
+                        return factory;
                     }
-
-                    return factory;
+                    
                 };
 
-                if (DOM_READY || PAGE_READY) {
+                if (INSTANCE_READY) {
                     return (trigger());
                 } else {
+
                     DomReady(function(){
-                        trigger();
+                        LoadAttempt(function(){
+                            return INSTANCE_READY;
+                        }, function(){
+                            trigger();
+                        });
                     });
+
                 }
 
             };
@@ -92,6 +135,10 @@
              * Instantiate a unique Modulr
              */
             Proto.instantiate = function(config) {
+
+                if (!config.context) {
+                    throwError("instantiation requires a context!");
+                }
 
                 var instance = new Modulr(config);
                 delete instance.instantiate; // remote instantiation access
@@ -106,28 +153,71 @@
                 PAGE_READY = true;
             };
 
+            function initializeInstance() {
+
+                // baseUrl - base instance path
+                CONFIG.baseUrl = CONFIG.baseUrl || getRelativeUrl();
+
+                // dependency loader for other instances
+                if (CONFIG.instanceDeps) {
+
+                    loadInstanceDependencies(CONFIG.instanceDeps, function(){
+                        INSTANCE_READY = true;
+                    });
+
+                } else {
+
+                    INSTANCE_READY = true;
+
+                }
+
+                // for each paths, add baseUrl
+                // if (CONFIG.paths) {
+                //     for (var i in CONFIG.paths) {
+                //         CONFIG.paths[i] = setConfigPaths(CONFIG.baseUrl, CONFIG.paths[i]);
+                //     }
+                // }
+
+            }
+
+            /**
+             * get module definition
+             */
             function get(id) {
                 var ret = null;
 
-                if (STACK[id]) {
-                    var stack = STACK[id],
-                        factory = stack.factory;
+                if (isArray(id)) {
 
-                    if (!stack.executed) {
-                        stack.executed = true;
+                    generateArrDeps(id);
 
-                        var deps = getDeps(id, stack.deps);
-                        STACK[id].factory = getFactory(stack.factory, deps);
+                } else {
+
+                    if (STACK[id]) {
+                        var stack = STACK[id],
+                            factory = stack.factory;
+
+                        if (!stack.executed) {
+                            stack.executed = true;
+
+                            var deps = getDeps(id, stack.deps);
+                            STACK[id].factory = getFactory(stack.factory, deps);
+
+                        }
+
+                        ret = STACK[id];
 
                     }
 
-                    ret = STACK[id];
-
                 }
+
+                
 
                 return ret;
             }
 
+            /**
+             * get dependencies
+             */
             function getDeps(modId, deps) {
                 var ret = [];
 
@@ -149,6 +239,9 @@
                 return ret;
             }
 
+            /**
+             * genrate array dependencies
+             */
             function generateArrDeps(arr, modId) {
 
                 var ret = {};
@@ -170,6 +263,9 @@
 
             }
 
+            /**
+             * set module selectors
+             */
             function getSelectors(str, modId) {
                 
                 var arr = [],
@@ -197,6 +293,9 @@
 
             }
 
+            /**
+             * set module dependencies
+             */
             function setDeps(holder, depId, modId) {
 
                 if (isArray(holder)) {
@@ -235,8 +334,34 @@
 
             }
 
+            function loadInstanceScript(id, src, callback) {
+
+                var loaded = false,
+                    script = document.createElement("script");
+
+                script.type = "text/javascript";
+                script.async = true;
+                script.src = src;
+                script.onload = script.onreadystatechange = function() {
+                    if (!loaded && (!this.readyState || this.readyState === "complete")) {
+                      loaded = true;
+                      callback();
+                    }
+                };
+                document.getElementsByTagName("head")[0].appendChild(s);
+
+            }
+
+
         }; // Modulr
 
+        /**
+         * modulr shared functions
+         */
+    
+        /**
+         * get module
+         */
         function getFactory(factory, deps) {
             var ret = null;
             if (isFN(factory)) {
@@ -248,10 +373,53 @@
             return ret;
         }
 
-        function isSelector(str) {
+        /**
+         * validate module id
+         */
+        function isValidId(id) {
+            var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
+            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports" && str.indexOf("**") === -1) ? true : false;
+        }
 
-            return (str.indexOf("**") > -1) ? true : false;
+        /**
+         * check if instance exists
+         */
+        function isInstanceFound(context) {
+            return (MODULR_STACK[context]) ? true : false;
+        }
 
+        /**
+         * config functions
+         */
+        function getRelativeUrl() {
+            var loc = window.location,
+                path = loc.pathname.split("/");
+            path.pop();
+            path = path.join("/") + "/";
+            return loc.protocol + "//" + (loc.host || loc.hostname) + path;
+        }
+
+        function setConfigPaths(baseUrl, path) {
+            baseUrl = rtrimSlash(baseUrl);
+            path = trimSlash(path);
+            return [baseUrl, path].join("/");
+        }
+
+        /**
+         * helper functions
+         */
+        
+        function trimSlash(val) {
+            val = rtrimSlash(ltrimSlash(val));
+            return val;
+        }
+
+        function ltrimSlash(val) {
+            return (val.charAt(0) === "/") ? val.slice(1) : val;
+        }
+
+        function rtrimSlash(val) {
+            return (val.charAt(val.length - 1) === "/") ? val.slice(0, val.length - 1) : val;
         }
 
         function isFN(val) {
@@ -265,11 +433,6 @@
         function isArray(val) {
             val = val || false;
             return Object.prototype.toString.call(val) === "[object Array]";
-        }
-
-        function isValidId(id) {
-            var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
-            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports" && str.indexOf("**") === -1) ? true : false;
         }
 
         function log() {
@@ -299,6 +462,11 @@
         (function(){
             //inclue:${domready}
             return domready;
+        }()),
+
+        (function(){
+            //inclue:${loadAttempt}
+            return LoadAttempt;
         }())
 
     ))
