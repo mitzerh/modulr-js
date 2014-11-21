@@ -422,6 +422,10 @@
             return (MODULR_STACK[context]) ? true : false;
         }
 
+        function isSelector(val) {
+            return (typeof val === "string" && val.indexOf("**") > -1) ? true : false;
+        }
+
         /**
          * config functions
          */

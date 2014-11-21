@@ -429,6 +429,10 @@
             return (MODULR_STACK[context]) ? true : false;
         }
 
+        function isSelector(val) {
+            return (typeof val === "string" && val.indexOf("**") > -1) ? true : false;
+        }
+
         /**
          * config functions
          */
@@ -513,7 +517,7 @@
         }()),
 
         (function(){
-            var LoadAttempt=function(){function a(a){return"number"==typeof a?!0:!1}function b(a){return"function"==typeof a?!0:!1}var c={attempts:999,timeout:500},d=arguments,e=!1;a(d[0])&&a(d[1])&&b(d[2])&&b(d[3])?e={attempts:d[0],timeout:d[1],check:d[2],success:d[3],expires:b(d[4])?d[4]:!1}:a(d[0])&&b(d[1])&&b(d[2])?e={attempts:d[0],timeout:c.timeout,check:d[1],success:d[2],expires:b(d[3])?d[3]:!1}:b(d[0])&&b(d[1])&&(e={attempts:c.attempts,timeout:c.timeout,check:d[0],success:d[1],expires:b(d[2])?d[2]:!1});var f,g=!1,h=function(){g?(clearTimeout(f),e.expires("aborted")):e.check()?(e.success(),clearTimeout(f)):e.attempts>0?f=setTimeout(function(){h()},e.timeout):e.expires("expired"),e.attempts--};return h(),{abort:function(){g=!0}}};
+            var LoadAttempt=function(){function a(a){return"number"==typeof a?!0:!1}function b(a){return"function"==typeof a?!0:!1}var c={attempts:999,timeout:50},d=arguments,e=!1;a(d[0])&&a(d[1])&&b(d[2])&&b(d[3])?e={attempts:d[0],timeout:d[1],check:d[2],success:d[3],expires:b(d[4])?d[4]:!1}:a(d[0])&&b(d[1])&&b(d[2])?e={attempts:d[0],timeout:c.timeout,check:d[1],success:d[2],expires:b(d[3])?d[3]:!1}:b(d[0])&&b(d[1])&&(e={attempts:c.attempts,timeout:c.timeout,check:d[0],success:d[1],expires:b(d[2])?d[2]:!1});var f,g=!1,h=function(){g?(clearTimeout(f),e.expires("aborted")):e.check()?(e.success(),clearTimeout(f)):e.attempts>0?f=setTimeout(function(){h()},e.timeout):e.expires("expired"),e.attempts--};return h(),{abort:function(){g=!0}}};
             return LoadAttempt;
         }())
 

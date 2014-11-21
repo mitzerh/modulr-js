@@ -9,7 +9,7 @@ var LoadAttempt = function() {
 
     var CONST = {
         attempts: 999,
-        timeout: 500
+        timeout: 50
     };
 
     var args = arguments,
