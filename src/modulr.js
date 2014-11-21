@@ -95,7 +95,7 @@
                 
                 var req = function() {
                     var ret = null,
-                        stack = get(id);
+                        stack = MODULE.get(id);
 
                     if (stack) {
                         ret = stack.exports || stack.factory;
@@ -136,16 +136,25 @@
             /**
              * Instantiate a unique Modulr
              */
-            Proto.instantiate = function(config) {
+            Proto.config = function(config) {
 
                 if (!config.context) {
-                    throwError("instantiation requires a context!");
+
+                    if (INSTANCE_INIT) {
+                        throwError("cannot re-configure! Modulr");
+                    } else {
+                        CONFIG = config;
+                    }
+
+                } else {
+
+                    var instance = new Modulr(config);
+                    delete instance.config; // remote instantiation access
+                    
+                    return instance;
+
                 }
 
-                var instance = new Modulr(config);
-                delete instance.instantiate; // remote instantiation access
-
-                return instance;
             };
 
             /**
@@ -163,7 +172,7 @@
                 // dependency loader for other instances
                 if (CONFIG.instanceDeps) {
 
-                    loadInstanceDependencies(CONFIG.instanceDeps, function(){
+                    MODULE.loadInstanceDependencies(CONFIG.instanceDeps, function(){
                         INSTANCE_READY = true;
                     });
 
@@ -182,210 +191,217 @@
 
             }
 
-            /**
-             * get module definition
-             */
-            function get(id) {
-                var ret = null;
+            var MODULE = {
 
-                if (isArray(id)) {
+                /**
+                 * get module definition
+                 */
+                get: function(id) {
+                    var self = this,
+                        ret = null;
 
-                    generateArrDeps(id);
+                    if (isArray(id)) {
 
-                } else {
+                        self.generateArrDeps(id);
 
-                    if (STACK[id]) {
-                        var stack = STACK[id],
-                            factory = stack.factory;
+                    } else {
 
-                        if (!stack.executed) {
-                            stack.executed = true;
+                        if (STACK[id]) {
+                            var stack = STACK[id],
+                                factory = stack.factory;
 
-                            var deps = getDeps(id, stack.deps);
-                            STACK[id].factory = getFactory(stack.factory, deps);
+                            if (!stack.executed) {
+                                stack.executed = true;
+
+                                var deps = self.getDeps(id, stack.deps);
+                                STACK[id].factory = getFactory(stack.factory, deps);
+
+                            }
+
+                            ret = STACK[id];
 
                         }
 
-                        ret = STACK[id];
+                    }
+
+                    return ret;
+                },
+
+                /**
+                 * get dependencies
+                 */
+                getDeps: function(modId, deps) {
+                    var self = this,
+                        ret = [];
+
+                    for (var i = 0; i < deps.length; i++) {
+                        var depId = deps[i];
+
+                        if (isArray(depId)) {
+                            ret.push(self.generateArrDeps(depId, modId));
+                        } else if (typeof depId === "string") {
+                            ret = self.setDeps(ret, depId, modId);
+                        } else {
+                            log('dependency:');
+                            log(depId);
+                            throwError("invalid dependency");
+                        }
 
                     }
 
-                }
+                    return ret;
+                },
 
-                
+                /**
+                 * genrate array dependencies
+                 */
+                generateArrDeps: function(arr, modId) {
+                    var self = this,
+                        ret = {};
 
-                return ret;
-            }
+                    for (var i = 0; i < arr.length; i++) {
+                        var depId = arr[i];
 
-            /**
-             * get dependencies
-             */
-            function getDeps(modId, deps) {
-                var ret = [];
+                        if (typeof depId === "string") {
+                            ret = self.setDeps(ret, depId, modId);
+                        } else {
+                            log('dependency:');
+                            log(depId);
+                            throwError("invalid dependency");
+                        }
 
-                for (var i = 0; i < deps.length; i++) {
-                    var depId = deps[i];
-
-                    if (isArray(depId)) {
-                        ret.push(generateArrDeps(depId, modId));
-                    } else if (typeof depId === "string") {
-                        ret = setDeps(ret, depId, modId);
-                    } else {
-                        log('dependency:');
-                        log(depId);
-                        throwError("invalid dependency");
                     }
 
-                }
+                    return ret;
 
-                return ret;
-            }
+                },
 
-            /**
-             * genrate array dependencies
-             */
-            function generateArrDeps(arr, modId) {
+                /**
+                 * set module selectors
+                 */
+                getSelectors: function(str, modId) {
+                    var self = this,
+                        arr = [],
+                        patt = str.replace("**", "");
 
-                var ret = {};
+                    for (var id in STACK) {
 
-                for (var i = 0; i < arr.length; i++) {
-                    var depId = arr[i];
+                        if (id.indexOf(patt) === 0) {
+                            arr.push(id);
+                        }
 
-                    if (typeof depId === "string") {
-                        ret = setDeps(ret, depId, modId);
-                    } else {
-                        log('dependency:');
-                        log(depId);
-                        throwError("invalid dependency");
+                    }
+                    
+                    var ret = self.generateArrDeps(arr, modId);
+
+                    // create stack
+                    STACK[str] = {
+                        executed: true,
+                        exports: {},
+                        deps: [],
+                        factory: ret
+                    };
+
+                    return ret;
+
+                },
+
+                /**
+                 * set module dependencies
+                 */
+                setDeps: function(holder, depId, modId) {
+                    var self = this;
+
+                    if (isArray(holder)) {
+
+                        if (depId === "define") {
+                            holder.push(Proto.define);
+                        } else if (depId === "require") {
+                            holder.push(Proto.require);
+                        } else if (depId === "exports") {
+                            holder.push(STACK[modId].exports);
+                        } else if (STACK[depId]) {
+                            holder.push(self.get(depId).factory);
+                        } else if (isSelector(depId)) {
+                            holder.push(self.getSelectors(depId, modId));
+                        } else {
+                            holder.push(null);
+                        }
+
+                    } else if (isObj(holder)) {
+
+                        if (depId === "define") {
+                            holder[depId] = Proto.define;
+                        } else if (depId === "require") {
+                            holder[depId] = Proto.require;
+                        } else if (depId === "exports") {
+                            holder[depId]= STACK[modId].exports;
+                        } else if (STACK[depId]) {
+                            holder[depId] = self.get(depId).factory;
+                        } else {
+                            holder[depId] = null;
+                        }
+
                     }
 
-                }
+                    return holder;
 
-                return ret;
+                },
 
-            }
+                loadInstanceDependencies: function(deps, callback) {
+                    var self = this,
+                        arr = [];
 
-            /**
-             * set module selectors
-             */
-            function getSelectors(str, modId) {
-                
-                var arr = [],
-                    patt = str.replace("**", "");
-
-                for (var id in STACK) {
-
-                    if (id.indexOf(patt) === 0) {
-                        arr.push(id);
+                    for (var name in deps) {
+                        arr.push(deps[name]);
                     }
 
-                }
-                
-                var ret = generateArrDeps(arr, modId);
+                    var next = true;
 
-                // create stack
-                STACK[str] = {
-                    executed: true,
-                    exports: {},
-                    deps: [],
-                    factory: ret
-                };
+                    LoadAttempt(function(){
 
-                return ret;
+                        var len = arr.length;
 
-            }
-
-            /**
-             * set module dependencies
-             */
-            function setDeps(holder, depId, modId) {
-
-                if (isArray(holder)) {
-
-                    if (depId === "define") {
-                        holder.push(Proto.define);
-                    } else if (depId === "require") {
-                        holder.push(Proto.require);
-                    } else if (depId === "exports") {
-                        holder.push(STACK[modId].exports);
-                    } else if (STACK[depId]) {
-                        holder.push(get(depId).factory);
-                    } else if (isSelector(depId)) {
-                        holder.push(getSelectors(depId, modId));
-                    } else {
-                        holder.push(null);
-                    }
-
-                } else if (isObj(holder)) {
-
-                    if (depId === "define") {
-                        holder[depId] = Proto.define;
-                    } else if (depId === "require") {
-                        holder[depId] = Proto.require;
-                    } else if (depId === "exports") {
-                        holder[depId]= STACK[modId].exports;
-                    } else if (STACK[depId]) {
-                        holder[depId] = get(depId).factory;
-                    } else {
-                        holder[depId] = null;
-                    }
-
-                }
-
-                return holder;
-
-            }
-
-            function loadInstanceDependencies(deps, callback) {
-
-                var arr = [];
-                for (var name in deps) {
-                    arr.push(deps[name]);
-                }
-
-                var next = true;
-
-                LoadAttempt(function(){
-
-                    var len = arr.length;
-
-                    if (next && len > 0) {
-                        next = true;
-                        loadInstanceScript(setConfigPath(CONFIG.baseUrl, arr.shift()) + ".js", function(){
+                        if (next && len > 0) {
                             next = true;
-                        });
-                    }
+                            var id = arr.shift();
 
-                    return (len === 0) ? true : false;
+                            self.loadInstanceScript(setConfigPath(CONFIG.baseUrl, id) + ".js", function(){
+                                next = true;
+                            });
+                        }
 
-                }, function(){
+                        return (len === 0) ? true : false;
 
-                    callback();
+                    }, function(){
 
-                });
+                        callback();
+
+                    });
 
 
-            }
+                },
 
-            function loadInstanceScript(src, callback) {
+                loadInstanceScript: function(src, callback) {
 
-                var loaded = false,
-                    script = document.createElement("script");
+                    var loaded = false,
+                        script = document.createElement("script");
 
-                script.setAttribute("data-modulr-context", CONTEXT);
-                script.type = "text/javascript";
-                script.async = true;
-                script.src = src;
-                script.onload = script.onreadystatechange = function() {
-                    if (!loaded && (!this.readyState || this.readyState === "complete")) {
-                      loaded = true;
-                      callback();
-                    }
-                };
-                document.getElementsByTagName("head")[0].appendChild(script);
+                    script.setAttribute("data-modulr-context", CONTEXT);
+                    script.type = "text/javascript";
+                    script.async = true;
+                    script.src = src;
+                    script.onload = script.onreadystatechange = function() {
+                        if (!loaded && (!this.readyState || this.readyState === "complete")) {
+                          loaded = true;
+                          callback();
+                        }
+                    };
+                    document.getElementsByTagName("head")[0].appendChild(script);
 
-            }
+                }
 
+            };
 
         }; // Modulr
 
