@@ -45,13 +45,6 @@
             var Proto = this;
 
             /**
-             * config setting (post-instantiation)
-             */
-            Proto.config = function(config) {
-                CONFIG = config;
-            };
-
-            /**
              * get current instance's config
              */
             Proto.getConfig = function() {
