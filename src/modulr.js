@@ -1,10 +1,11 @@
 (function(window, app){
 
-    window.Modulr = app;
+    // do not override existing Modulr implementation
+    window.Modulr = window.Modulr || app;
 
 }(window,
 
-    (function(DomReady, LoadAttempt){
+    (function(DomReady){
 
         var CONST = {};
         CONST.prefix = "[Modulr]";
@@ -21,7 +22,7 @@
 
             CONFIG = CONFIG || {};
             // default context
-            CONFIG.context = CONFIG.context || "Modulr";
+            CONFIG.context = CONFIG.context || "_";
 
             var CONTEXT = CONFIG.context;
 
@@ -55,6 +56,7 @@
              * define
              */
             Proto.define = function(id, deps, factory) {
+                // if invalid id
                 if (!isValidId(id)) {
                     throwError("invalid id: '" + id + "'.");
                 }
@@ -78,49 +80,46 @@
             /**
              * execute a factory function
              */
-            Proto.require = function(id, callback) {
+            Proto.require = function(deps, callback) {
 
-                // instantiate on initial require()
-                if (!INSTANCE_INIT) {
-                    INSTANCE_INIT = true;
-                    initializeInstance();
-                }
-                
-                var req = function() {
-                    var ret = null,
-                        stack = MODULE.get(id);
+                if (isStr(deps)) {
 
-                    if (stack) {
-                        ret = stack.exports || stack.factory;
-                    }
+                    return getDefinedModule(deps);
 
-                    return ret;
-                };
+                } else if (isArray(deps)) {
 
-                var trigger = function() {
-                    var factory = req();
+                    var getDeps = function() {
+                        // get dependencies
+                        MODULE.get(null, deps, function(args){
+                            getFactory(callback, args);
+                        });
+                    };
 
-                    if (isArray(id)) {
-                        if (isFN(callback)) {
-                            callback();
+                    var trigger = function() {
+
+                        // initialize the first time
+                        if (!INSTANCE_INIT) {
+                            
+                            INSTANCE_INIT = true;
+
+                            initializeInstance(function(){
+                                getDeps();
+                            });
+
+                        } else {
+                            getDeps();
                         }
+
+                    };
+
+                    if (PAGE_READY) {
+                        trigger();
                     } else {
-                        return factory;
-                    }
-                    
-                };
-
-                if (INSTANCE_READY) {
-                    return (trigger());
-                } else {
-
-                    DomReady(function(){
-                        LoadAttempt(function(){
-                            return INSTANCE_READY;
-                        }, function(){
+                        DomReady(function(){
                             trigger();
                         });
-                    });
+                    }
+                    
 
                 }
 
@@ -142,8 +141,10 @@
                 } else {
 
                     var instance = new Modulr(config);
-                    delete instance.config; // remote instantiation access
                     
+                    delete instance.config; // remote instantiation access
+                    delete instance.ready; // no need for ready state
+
                     return instance;
 
                 }
@@ -157,7 +158,19 @@
                 PAGE_READY = true;
             };
 
-            function initializeInstance() {
+            /**
+             * get stack from require
+             */
+            function getDefinedModule(id) {
+                var stack = STACK[id];
+                if (stack && !stack.executed) {
+                    throwError("module not yet executed: '"+id+"'");
+                }
+                return (stack) ? (stack.exports || stack.factory) : null;
+            }
+
+
+            function initializeInstance(callback) {
 
                 // baseUrl - base instance path
                 CONFIG.baseUrl = CONFIG.baseUrl || getRelativeUrl();
@@ -165,13 +178,15 @@
                 // dependency loader for other instances
                 if (CONFIG.instanceDeps) {
 
-                    MODULE.loadInstanceDependencies(CONFIG.instanceDeps, function(){
+                    loadInstanceDeps(CONFIG.instanceDeps, function(){
                         INSTANCE_READY = true;
+                        callback();
                     });
 
                 } else {
 
                     INSTANCE_READY = true;
+                    callback();
 
                 }
 
@@ -186,215 +201,154 @@
 
             var MODULE = {
 
-                /**
-                 * get module definition
-                 */
-                get: function(id) {
+                get: function(moduleId, deps, callback) {
                     var self = this,
-                        ret = null;
+                        next = true,
+                        args = [],
+                        arr;
 
-                    if (isArray(id)) {
+                    if (deps) {
+                        arr = cloneArr(deps);
+                    } else if (moduleId && STACK[moduleId]) {
+                        arr = cloneArr(STACK[moduleId].deps);
+                    }
 
-                        self.generateArrDeps(id);
+                    var getDeps = function() {
 
-                    } else {
+                        if (arr.length === 0) {
 
-                        if (STACK[id]) {
-                            var stack = STACK[id],
-                                factory = stack.factory;
+                            callback(args);
 
-                            if (!stack.executed) {
-                                stack.executed = true;
+                        } else {
 
-                                var deps = self.getDeps(id, stack.deps);
-                                STACK[id].factory = getFactory(stack.factory, deps);
+                            var id = arr.shift(),
+                                module = STACK[id] || false;
+
+                            if (id === "require") {
+                                args.push(Proto.require);
+                                getDeps();
+                            } else if (id === "define") {
+                                args.push(Proto.define);
+                                getDeps();
+                            } else if (id === "exports") {
+                                args.push(STACK[moduleId].exports);
+                                getDeps();
+                            } else if (module) {
+
+                                if (module.executed) {
+                                    args.push(self.getModuleFactory(module));
+                                    getDeps();
+                                } else {
+                                    self.execModule(null, null, id, function(factory){
+                                        args.push(factory);
+                                        getDeps();
+                                    });
+                                }
+                                
+                            } else {
+
+                                // try to load external script
+                                var src = self.getModulePath(id);
+
+                                loadScript(src, function(){
+
+                                    self.execModule("load", src, id, function(factory){
+                                        args.push(factory);
+                                        getDeps();
+                                    });
+
+                                });
 
                             }
 
-                            ret = STACK[id];
-
                         }
 
-                    }
-
-                    return ret;
-                },
-
-                /**
-                 * get dependencies
-                 */
-                getDeps: function(modId, deps) {
-                    var self = this,
-                        ret = [];
-
-                    for (var i = 0; i < deps.length; i++) {
-                        var depId = deps[i];
-
-                        if (isArray(depId)) {
-                            ret.push(self.generateArrDeps(depId, modId));
-                        } else if (typeof depId === "string") {
-                            ret = self.setDeps(ret, depId, modId);
-                        } else {
-                            log('dependency:');
-                            log(depId);
-                            throwError("invalid dependency");
-                        }
-
-                    }
-
-                    return ret;
-                },
-
-                /**
-                 * genrate array dependencies
-                 */
-                generateArrDeps: function(arr, modId) {
-                    var self = this,
-                        ret = {};
-
-                    for (var i = 0; i < arr.length; i++) {
-                        var depId = arr[i];
-
-                        if (typeof depId === "string") {
-                            ret = self.setDeps(ret, depId, modId);
-                        } else {
-                            log('dependency:');
-                            log(depId);
-                            throwError("invalid dependency");
-                        }
-
-                    }
-
-                    return ret;
-
-                },
-
-                /**
-                 * set module selectors
-                 */
-                getSelectors: function(str, modId) {
-                    var self = this,
-                        arr = [],
-                        patt = str.replace("**", "");
-
-                    for (var id in STACK) {
-
-                        if (id.indexOf(patt) === 0) {
-                            arr.push(id);
-                        }
-
-                    }
-                    
-                    var ret = self.generateArrDeps(arr, modId);
-
-                    // create stack
-                    STACK[str] = {
-                        executed: true,
-                        exports: {},
-                        deps: [],
-                        factory: ret
                     };
 
-                    return ret;
+                    getDeps();
 
                 },
 
-                /**
-                 * set module dependencies
-                 */
-                setDeps: function(holder, depId, modId) {
-                    var self = this;
-
-                    if (isArray(holder)) {
-
-                        if (depId === "define") {
-                            holder.push(Proto.define);
-                        } else if (depId === "require") {
-                            holder.push(Proto.require);
-                        } else if (depId === "exports") {
-                            holder.push(STACK[modId].exports);
-                        } else if (STACK[depId]) {
-                            holder.push(self.get(depId).factory);
-                        } else if (isSelector(depId)) {
-                            holder.push(self.getSelectors(depId, modId));
-                        } else {
-                            holder.push(null);
-                        }
-
-                    } else if (isObj(holder)) {
-
-                        if (depId === "define") {
-                            holder[depId] = Proto.define;
-                        } else if (depId === "require") {
-                            holder[depId] = Proto.require;
-                        } else if (depId === "exports") {
-                            holder[depId]= STACK[modId].exports;
-                        } else if (STACK[depId]) {
-                            holder[depId] = self.get(depId).factory;
-                        } else {
-                            holder[depId] = null;
-                        }
-
-                    }
-
-                    return holder;
-
-                },
-
-                loadInstanceDependencies: function(deps, callback) {
+                execModule: function(type, src, id, callback) {
                     var self = this,
-                        arr = [];
+                        module = STACK[id];
 
-                    for (var name in deps) {
-                        arr.push(deps[name]);
+                    if (type === "load" && !module) {
+                        throwError("loaded file: " + src + " -- does not match definition id: '" + id + "'");
                     }
 
-                    var next = true;
-
-                    LoadAttempt(function(){
-
-                        var len = arr.length;
-
-                        if (next && len > 0) {
-                            next = true;
-                            var id = arr.shift();
-
-                            self.loadInstanceScript(setConfigPath(CONFIG.baseUrl, id) + ".js", function(){
-                                next = true;
-                            });
-                        }
-
-                        return (len === 0) ? true : false;
-
-                    }, function(){
-
-                        callback();
-
+                    self.get(id, module.deps, function(args){
+                        module.executed = true;
+                        module.factory = getFactory(module.factory, args);
+                        callback(self.getModuleFactory(module));
                     });
 
-
                 },
 
-                loadInstanceScript: function(src, callback) {
+                getModuleFactory: function(module){
+                    return module.exports || module.factory;
+                },
 
-                    var loaded = false,
-                        script = document.createElement("script");
+                getModulePath: function(id) {
 
-                    script.setAttribute("data-modulr-context", CONTEXT);
-                    script.type = "text/javascript";
-                    script.async = true;
-                    script.src = src;
-                    script.onload = script.onreadystatechange = function() {
-                        if (!loaded && (!this.readyState || this.readyState === "complete")) {
-                          loaded = true;
-                          callback();
-                        }
-                    };
-                    document.getElementsByTagName("head")[0].appendChild(script);
+                    // base url - base instance path
+                    var base = CONFIG.baseUrl || getRelativeUrl(),
+                        url = setConfigPath(base,id) + ".js";
 
+                    return url;
                 }
 
             };
+
+            function loadInstanceDeps(depsObj, callback) {
+                var arr = [];
+
+                for (var id in depsObj) {
+                    arr.push({
+                        id: id,
+                        path: depsObj[id]
+                    });
+                }
+
+                var getDeps = function() {
+
+                    if (arr.length === 0) {
+                        callback();
+                    } else {
+
+                        var obj = arr.shift(),
+                            path = obj.path,
+                            src = MODULE.getModulePath(obj.path);
+                        
+                        loadScript(src, function(){
+                            getDeps();
+                        });
+                    }
+
+                };
+
+                getDeps();
+
+            }
+
+            function loadScript(src, callback) {
+
+                var loaded = false,
+                    script = document.createElement("script");
+
+                script.setAttribute("data-modulr-context", CONTEXT);
+                script.type = "text/javascript";
+                script.async = true;
+                script.src = src;
+                script.onload = script.onreadystatechange = function() {
+                    if (!loaded && (!this.readyState || this.readyState === "complete")) {
+                      loaded = true;
+                      callback();
+                    }
+                };
+                document.getElementsByTagName("head")[0].appendChild(script);
+
+            }
 
         }; // Modulr
 
@@ -421,7 +375,7 @@
          */
         function isValidId(id) {
             var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
-            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports" && str.indexOf("**") === -1) ? true : false;
+            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports") ? true : false;
         }
 
         /**
@@ -429,10 +383,6 @@
          */
         function isInstanceFound(context) {
             return (MODULR_STACK[context]) ? true : false;
-        }
-
-        function isSelector(val) {
-            return (typeof val === "string" && val.indexOf("**") > -1) ? true : false;
         }
 
         /**
@@ -476,6 +426,10 @@
             return (val.charAt(val.length - 1) === "/") ? val.slice(0, val.length - 1) : val;
         }
 
+        function isStr(val) {
+            return (typeof val === "string") ? true : false;
+        }
+
         function isFN(val) {
             return (typeof val === "function") ? true : false;
         }
@@ -516,11 +470,6 @@
         (function(){
             //inclue:${domready}
             return domready;
-        }()),
-
-        (function(){
-            //inclue:${loadAttempt}
-            return LoadAttempt;
         }())
 
     ))
