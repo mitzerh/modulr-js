@@ -23,6 +23,8 @@
             CONFIG = CONFIG || {};
             // default context
             CONFIG.context = CONFIG.context || "_";
+            // wait for DOM or PAGE ready (true default)
+            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
 
@@ -112,14 +114,19 @@
 
                     };
 
-                    if (PAGE_READY) {
+                    if (!CONFIG.wait) {
                         trigger();
                     } else {
-                        DomReady(function(){
+                        
+                        if (PAGE_READY) {
                             trigger();
-                        });
+                        } else {
+                            DomReady(function(){
+                                trigger();
+                            });
+                        }
+
                     }
-                    
 
                 }
 
