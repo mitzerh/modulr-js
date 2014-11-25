@@ -52,6 +52,13 @@ module.exports = function(grunt) {
 
                 }
 
+            },
+
+            sample: {
+
+                src: 'js/modulr.js',
+                dest: 'sample/js/modulr.js'
+
             }
             
         },
@@ -101,7 +108,7 @@ module.exports = function(grunt) {
     // load npm's
     require("matchdep").filterDev("grunt-*").forEach(grunt.loadNpmTasks);
 
-    grunt.registerTask('default', ['clean:dest', 'uglify:includes', 'jshint', 'copy:dist', 'uglify:dist', 'clean:temp']);
+    grunt.registerTask('default', ['clean:dest', 'uglify:includes', 'jshint', 'copy:dist', 'copy:sample', 'uglify:dist', 'clean:temp']);
 
     grunt.initConfig(config);
 

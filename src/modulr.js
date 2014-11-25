@@ -134,7 +134,7 @@
                 if (!config.context) {
 
                     if (INSTANCE_INIT) {
-                        throwError("cannot re-configure! Modulr");
+                        throwError("cannot re-configure Modulr");
                     } else {
                         CONFIG = config;
                     }
