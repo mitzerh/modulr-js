@@ -173,7 +173,7 @@
                 if (stack && !stack.executed) {
                     throwError("module not yet executed: '"+id+"'");
                 }
-                return (stack) ? (stack.exports || stack.factory) : null;
+                return (stack) ? (stack.factory || stack.exports) : null;
             }
 
 
@@ -293,7 +293,7 @@
                 },
 
                 getModuleFactory: function(module){
-                    return module.exports || module.factory;
+                    return module.factory || module.exports;
                 },
 
                 getModulePath: function(id) {
