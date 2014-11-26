@@ -2,8 +2,16 @@
 
     Modulr.config({
         baseUrl: "/test/modulr/sample/js",
-        instanceDeps: {
-            "MyFoo": "/app2/main"
+        shim: {
+            "jquery": {
+                deps: ["modernizr"],
+                src: "//global.fncstatic.com/static/v/all/js/ag.jquery.js",
+                exports: "jQuery"
+            },
+            "modernizr": {
+                src: "//global.fncstatic.com/static/v/all/js/modernizr/modernizr.js",
+                exports: "Modernizr"
+            }
         }
     });
 
