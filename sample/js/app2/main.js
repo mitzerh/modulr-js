@@ -6,5 +6,6 @@ var MY_FOO = Modulr.config({
 MY_FOO.require(["require", "foobar"], function(require){
 
     var foobar = require("foobar");
+    foobar.foo();
     
 });
