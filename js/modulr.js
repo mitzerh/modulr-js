@@ -189,31 +189,35 @@
 
             function initializeInstance(callback) {
 
+                // base domain
+                CONFIG.baseDomain = CONFIG.baseDomain || getDomain();
                 // baseUrl - base instance path
-                CONFIG.baseUrl = CONFIG.baseUrl || getRelativeUrl();
+                CONFIG.baseUrl = CONFIG.baseUrl || getRelativePath();
 
-                // dependency loader for other instances
-                if (CONFIG.instanceDeps) {
-
-                    loadInstanceDeps(CONFIG.instanceDeps, function(){
-                        INSTANCE_READY = true;
-                        callback();
-                    });
-
-                } else {
-
+                var isReady = function() {
                     INSTANCE_READY = true;
                     callback();
+                };
 
-                }
+                // dependency loader for other instances
+                // if (CONFIG.instanceDeps) {
 
-                // for each paths, add baseUrl
-                // if (CONFIG.paths) {
-                //     for (var i in CONFIG.paths) {
-                //         CONFIG.paths[i] = setConfigPath(CONFIG.baseUrl, CONFIG.paths[i]);
-                //     }
+                //     loadInstanceDeps(CONFIG.instanceDeps, function(){
+                //         INSTANCE_READY = true;
+                //         callback();
+                //     });
+
+                // } else {
+
+                //     INSTANCE_READY = true;
+                //     callback();
+
                 // }
-
+                
+                loadShim(function(){
+                    isReady();
+                });
+                
             }
 
             var MODULE = {
@@ -309,13 +313,17 @@
                 getModulePath: function(id) {
 
                     // base url - base instance path
-                    var base = CONFIG.baseUrl || getRelativeUrl(),
+                    var base = getContextBasePath(),
                         url = setConfigPath(base,id) + ".js";
 
                     return url;
                 }
 
             };
+
+            function getContextBasePath() {
+                return [rtrimSlash(CONFIG.baseDomain) || getDomain(), CONFIG.baseUrl || getRelativePath()].join("/");
+            }
 
             function loadInstanceDeps(depsObj, callback) {
                 var arr = [];
@@ -346,6 +354,68 @@
 
                 getDeps();
 
+            }
+
+            function loadShim(callback) {
+
+                if (!CONFIG.shim) {
+
+                    callback();
+
+                } else {
+
+                    var arr = [];
+
+                    for (var id in CONFIG.shim) {
+                        arr.push({
+                            id: id,
+                            info: CONFIG.shim[id]
+                        });
+                    }
+
+                    var getShim = function() {
+
+                        if (arr.length === 0) {
+                            callback();
+                        } else {
+
+                            var obj = arr.shift(),
+                                id = obj.id,
+                                info = obj.info,
+                                src = getShimSrc(info.src),
+                                deps = info.deps || [];
+
+                            loadScript(src, id, function(){
+                                if (!window[info.exports]) {
+                                    throwError("shim export not found for: '"+id+"'");
+                                } else {
+                                    Proto.define(id, deps, function(){
+                                        return window[info.exports];
+                                    });
+                                    getShim();
+                                }
+                            });
+
+                        }
+
+                    };
+
+                    getShim();
+
+                }
+
+            }
+
+            function getShimSrc(src) {
+                var ret = src;
+
+                if (src.indexOf("//") === 0 || src.indexOf("http") === 0) {
+                    ret = src;
+                } else {
+                    ret = CONFIG.baseDomain + ((src.charAt(0) !== "/") ? "/" : "") + src;
+                }
+
+                return ret;
             }
 
             /**
@@ -455,12 +525,17 @@
         /**
          * config functions
          */
-        function getRelativeUrl() {
+        function getRelativePath() {
             var loc = window.location,
                 path = loc.pathname.split("/");
             path.pop();
             path = path.join("/") + "/";
-            return loc.protocol + "//" + (loc.host || loc.hostname) + path;
+            return getDomain()+ path;
+        }
+
+        function getDomain() {
+            var loc = window.location;
+            return loc.protocol + "//" + (loc.host || loc.hostname);
         }
 
         function setConfigPath(baseUrl, path) {
