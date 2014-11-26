@@ -28,6 +28,7 @@
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
             readyRegExp = /^(complete|loaded)$/;
 
+
         var Modulr = function(CONFIG) {
 
             CONFIG = CONFIG || {};
@@ -52,10 +53,11 @@
                 INSTANCE_INIT = false,
                 INSTANCE_READY = false;
 
-            // version
-            this.version = "0.2.5";
-
             var Proto = this;
+
+            // version
+            Proto.version = "0.2.5";
+
 
             /**
              * get current instance's config
@@ -94,7 +96,7 @@
              */
             Proto.require = function(deps, callback) {
 
-                if (isStr(deps)) {
+                if (typeof deps === "string") {
 
                     return getDefinedModule(deps);
 
@@ -199,21 +201,7 @@
                     callback();
                 };
 
-                // dependency loader for other instances
-                // if (CONFIG.instanceDeps) {
-
-                //     loadInstanceDeps(CONFIG.instanceDeps, function(){
-                //         INSTANCE_READY = true;
-                //         callback();
-                //     });
-
-                // } else {
-
-                //     INSTANCE_READY = true;
-                //     callback();
-
-                // }
-                
+                // load shim
                 loadShim(function(){
                     isReady();
                 });
@@ -498,7 +486,7 @@
          */
         function getFactory(factory, deps) {
             var ret = null;
-            if (isFN(factory)) {
+            if (typeof factory === "function") {
                 ret = factory.apply(factory, deps);
             } else {
                 ret = factory;
@@ -577,18 +565,6 @@
 
         function rtrimSlash(val) {
             return (val.charAt(val.length - 1) === "/") ? val.slice(0, val.length - 1) : val;
-        }
-
-        function isStr(val) {
-            return (typeof val === "string") ? true : false;
-        }
-
-        function isFN(val) {
-            return (typeof val === "function") ? true : false;
-        }
-
-        function isObj(val) {
-            return (typeof val === "object" && !isArray(val)) ? true : false;
         }
 
         function isArray(val) {

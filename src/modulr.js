@@ -19,7 +19,7 @@
         });
 
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
-            readyRegExp = /^(complete|loaded)$/,
+            readyRegExp = /^(complete|loaded)$/;
 
 
         var Modulr = function(CONFIG) {
