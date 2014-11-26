@@ -273,17 +273,17 @@
 
                 execModule: function(type, src, id, callback) {
                     var self = this,
-                        module = STACK[id];
+                        module = STACK[id] || false;
 
-                    if (type === "load" && !module) {
-                        throwError("loaded file: " + src + " -- does not match definition id: '" + id + "'");
+                    if (module) {
+                        self.get(id, module.deps, function(args){
+                            module.executed = true;
+                            module.factory = getFactory(module.factory, args);
+                            callback(self.getModuleFactory(module));
+                        });
+                    } else {
+                        log("loading external source: " + src);
                     }
-
-                    self.get(id, module.deps, function(args){
-                        module.executed = true;
-                        module.factory = getFactory(module.factory, args);
-                        callback(self.getModuleFactory(module));
-                    });
 
                 },
 
@@ -303,7 +303,7 @@
             };
 
             function getContextBasePath() {
-                return [rtrimSlash(CONFIG.baseDomain) || getDomain(), CONFIG.baseUrl || getRelativePath()].join("/");
+                return [rtrimSlash(CONFIG.baseDomain || getDomain()), ltrimSlash(CONFIG.baseUrl || getRelativePath())].join("/");
             }
 
             function loadInstanceDeps(depsObj, callback) {
