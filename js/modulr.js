@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.2.2 | 2014-11-25
+* modulr-js v0.2.4 | 2014-11-26
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -25,11 +25,16 @@
             DOM_READY = true;
         });
 
+        var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
+            readyRegExp = /^(complete|loaded)$/;
+
         var Modulr = function(CONFIG) {
 
             CONFIG = CONFIG || {};
             // default context
             CONFIG.context = CONFIG.context || "_";
+            // wait for DOM or PAGE ready (true default)
+            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
 
@@ -48,7 +53,7 @@
                 INSTANCE_READY = false;
 
             // version
-            this.version = "0.2.2";
+            this.version = "0.2.4";
 
             var Proto = this;
 
@@ -119,14 +124,19 @@
 
                     };
 
-                    if (PAGE_READY) {
+                    if (!CONFIG.wait) {
                         trigger();
                     } else {
-                        DomReady(function(){
+                        
+                        if (PAGE_READY) {
                             trigger();
-                        });
+                        } else {
+                            DomReady(function(){
+                                trigger();
+                            });
+                        }
+
                     }
-                    
 
                 }
 
@@ -257,7 +267,7 @@
                                 // try to load external script
                                 var src = self.getModulePath(id);
 
-                                loadScript(src, function(){
+                                loadScript(src, id, function(){
 
                                     self.execModule("load", src, id, function(factory){
                                         args.push(factory);
@@ -327,7 +337,7 @@
                             path = obj.path,
                             src = MODULE.getModulePath(obj.path);
                         
-                        loadScript(src, function(){
+                        loadScript(src, null, function(){
                             getDeps();
                         });
                     }
@@ -338,21 +348,71 @@
 
             }
 
-            function loadScript(src, callback) {
+            /**
+             * loadScript
+             * Credit to partial implementation: RequireJS
+             */
+            function loadScript(src, id, callback) {
 
                 var loaded = false,
                     script = document.createElement("script");
 
-                script.setAttribute("data-modulr-context", CONTEXT);
-                script.type = "text/javascript";
-                script.async = true;
-                script.src = src;
-                script.onload = script.onreadystatechange = function() {
-                    if (!loaded && (!this.readyState || this.readyState === "complete")) {
-                      loaded = true;
-                      callback();
+                var onLoad = function(evt) {
+                    
+                    //Using currentTarget instead of target for Firefox 2.0's sake. Not
+                    //all old browsers will be supported, but this one was easy enough
+                    //to support and still makes sense.
+                    if (!loaded && evt.type === 'load' ||
+                        (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
+                        
+                        loaded = true;
+                        callback(id);
+                        removeScriptListener();
+
                     }
+
                 };
+
+                var onError = function() {
+                    throwError("error loading script: " + src);
+                };
+
+                var removeScriptListener = function() {
+                    removeListener(script, onLoad, "load", "onreadystatechange");
+                    removeListener(script, onError, "error");
+                };
+
+                if (id) {
+                    script.setAttribute("data-modulr-module", id);
+                }
+                script.setAttribute("data-modulr-context", CONTEXT);
+                
+                script.type = "text/javascript";
+                script.charset = "utf-8";
+                script.async = true;
+
+                if (script.attachEvent &&
+                    //Check if node.attachEvent is artificially added by custom script or
+                    //natively supported by browser
+                    //read https://github.com/jrburke/requirejs/issues/187
+                    //if we can NOT find [native code] then it must NOT natively supported.
+                    //in IE8, node.attachEvent does not have toString()
+                    //Note the test for "[native code" with no closing brace, see:
+                    //https://github.com/jrburke/requirejs/issues/273
+                    !(script.attachEvent.toString && script.attachEvent.toString().indexOf("[native code") < 0) &&
+                    !isOpera) {
+                
+                    script.attachEvent("onreadystatechange", onLoad);
+                    
+                } else {
+
+                    script.addEventListener("load", onLoad, false);
+                    script.addEventListener("error", onError, false);
+
+                }
+
+                script.src = src;
+
                 document.getElementsByTagName("head")[0].appendChild(script);
 
             }
@@ -418,6 +478,17 @@
                 ret.push(arr[i]);
             }
             return ret;
+        }
+
+        // from requirejs
+        function removeListener(node, func, name, ieName) {
+            if (node.detachEvent && !isOpera) {
+                if (ieName) {
+                    node.detachEvent(ieName, func);
+                }
+            } else {
+                node.removeEventListener(name, func, false);
+            }
         }
 
         function trimSlash(val) {
