@@ -1,7 +1,7 @@
-(function(window, app){
+var Modulr = (function(window, app){
 
-    // do not override existing Modulr implementation
-    window.Modulr = window.Modulr || app;
+    // do not override existing Modulr declaration
+    return window.Modulr || app;
 
 }(window,
 
@@ -123,7 +123,7 @@
                         trigger();
                     } else {
                         
-                        if (PAGE_READY) {
+                        if (PAGE_READY || DOM_READY) {
                             trigger();
                         } else {
                             DomReady(function(){

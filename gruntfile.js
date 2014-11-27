@@ -39,11 +39,6 @@ module.exports = function(grunt) {
                             return ret;
                         }()));
 
-                        content = content.replace('\/\/inclue:${loadAttempt}', (function(){
-                            var ret = grunt.file.read(__dirname + '/src/loadAttempt.tmp');
-                            return ret;
-                        }()));
-
                         content = [comment, content].join('\n\n');
 
                         return content;
@@ -95,8 +90,7 @@ module.exports = function(grunt) {
                     mangle: true
                 },
                 files: {
-                    'src/domready.tmp': 'src/domready.js',
-                    'src/loadAttempt.tmp': 'src/loadAttempt.js'
+                    'src/domready.tmp': 'src/domready.js'
                 }
 
             }
