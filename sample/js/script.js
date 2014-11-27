@@ -15,7 +15,7 @@
         }
     });
 
-    Modulr.require(["app1/main"], function(){
+    Modulr.require(["app1/main", "someExternalScript"], function(){
         console.log("LOADED");
     });
 

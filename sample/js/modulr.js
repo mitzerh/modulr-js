@@ -1,14 +1,14 @@
 /**
-* modulr-js v0.2.5 | 2014-11-26
+* modulr-js v0.2.6 | 2014-11-27
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
 **/
 
-(function(window, app){
+var Modulr = (function(window, app){
 
-    // do not override existing Modulr implementation
-    window.Modulr = window.Modulr || app;
+    // do not override existing Modulr declaration
+    return window.Modulr || app;
 
 }(window,
 
@@ -56,7 +56,7 @@
             var Proto = this;
 
             // version
-            Proto.version = "0.2.5";
+            Proto.version = "0.2.6";
 
 
             /**
@@ -130,7 +130,7 @@
                         trigger();
                     } else {
                         
-                        if (PAGE_READY) {
+                        if (PAGE_READY || DOM_READY) {
                             trigger();
                         } else {
                             DomReady(function(){
@@ -280,17 +280,17 @@
 
                 execModule: function(type, src, id, callback) {
                     var self = this,
-                        module = STACK[id];
+                        module = STACK[id] || false;
 
-                    if (type === "load" && !module) {
-                        throwError("loaded file: " + src + " -- does not match definition id: '" + id + "'");
+                    if (module) {
+                        self.get(id, module.deps, function(args){
+                            module.executed = true;
+                            module.factory = getFactory(module.factory, args);
+                            callback(self.getModuleFactory(module));
+                        });
+                    } else {
+                        log("loading external source: " + src);
                     }
-
-                    self.get(id, module.deps, function(args){
-                        module.executed = true;
-                        module.factory = getFactory(module.factory, args);
-                        callback(self.getModuleFactory(module));
-                    });
 
                 },
 
@@ -310,7 +310,7 @@
             };
 
             function getContextBasePath() {
-                return [rtrimSlash(CONFIG.baseDomain) || getDomain(), CONFIG.baseUrl || getRelativePath()].join("/");
+                return [rtrimSlash(CONFIG.baseDomain || getDomain()), ltrimSlash(CONFIG.baseUrl || getRelativePath())].join("/");
             }
 
             function loadInstanceDeps(depsObj, callback) {
