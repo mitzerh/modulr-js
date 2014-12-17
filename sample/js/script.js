@@ -17,6 +17,7 @@
 
     Modulr.require(["app1/main", "someExternalScript"], function(){
         console.log("LOADED");
+        console.log(window.foo_bear);
     });
 
 }());
