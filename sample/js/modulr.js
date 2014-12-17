@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.2.6 | 2014-11-27
+* modulr-js v0.2.7 | 2014-12-17
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -56,7 +56,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.2.6";
+            Proto.version = "0.2.7";
 
 
             /**
@@ -208,9 +208,15 @@ var Modulr = (function(window, app){
                 
             }
 
-            var MODULE = {
+            // module functions
+            var MODULE = (function(){
 
-                get: function(moduleId, deps, callback) {
+                var App = function() {
+
+                };
+
+                
+                App.prototype.get = function(moduleId, deps, callback) {
                     var self = this,
                         next = true,
                         args = [],
@@ -231,7 +237,7 @@ var Modulr = (function(window, app){
                         } else {
 
                             var id = arr.shift(),
-                                module = STACK[id] || false;
+                                module = getStack(id);
 
                             if (id === "require") {
                                 args.push(Proto.require);
@@ -258,13 +264,14 @@ var Modulr = (function(window, app){
 
                                 // try to load external script
                                 var src = self.getModulePath(id);
-
+                                
                                 loadScript(src, id, function(){
 
                                     self.execModule("load", src, id, function(factory){
                                         args.push(factory);
                                         getDeps();
                                     });
+
 
                                 });
 
@@ -276,11 +283,11 @@ var Modulr = (function(window, app){
 
                     getDeps();
 
-                },
+                };
 
-                execModule: function(type, src, id, callback) {
+                App.prototype.execModule = function(type, src, id, callback) {
                     var self = this,
-                        module = STACK[id] || false;
+                        module = getStack(id);
 
                     if (module) {
                         self.get(id, module.deps, function(args){
@@ -289,25 +296,39 @@ var Modulr = (function(window, app){
                             callback(self.getModuleFactory(module));
                         });
                     } else {
+                        
                         log("loading external source: " + src);
+
+                        callback({
+                            id: id,
+                            src: src,
+                            type: "external-script"
+                        });
+
                     }
 
-                },
+                };
 
-                getModuleFactory: function(module){
+                App.prototype.getModuleFactory = function(module){
                     return module.factory || module.exports;
-                },
+                };
 
-                getModulePath: function(id) {
+                App.prototype.getModulePath = function(id) {
 
                     // base url - base instance path
                     var base = getContextBasePath(),
                         url = setConfigPath(base,id) + ".js";
 
                     return url;
-                }
+                };
 
-            };
+                return (new App());
+
+            }());
+    
+            function getStack(id) {
+                return STACK[id] || false;
+            }
 
             function getContextBasePath() {
                 return [rtrimSlash(CONFIG.baseDomain || getDomain()), ltrimSlash(CONFIG.baseUrl || getRelativePath())].join("/");
