@@ -75,17 +75,31 @@ var Modulr = (function(window, app){
                     throwError("invalid id: '" + id + "'.");
                 }
 
-                // only define if not yet defined
-                if (!STACK[id]) {
+                var ext = isExtendedModule(id);
 
-                    deps = deps || [];
+                // extended module definition
+                if (ext) {
+                    
+                    if (MODULR_STACK[ext.context]) {
+                        var instance = MODULR_STACK[ext.context].instance;
+                        instance.define(ext.id, deps, factory);
+                    }
 
-                    STACK[id] = {
-                        executed: false,
-                        exports: {},
-                        deps: deps, // dependencies
-                        factory: factory
-                    };
+                } else {
+
+                    // only define if not yet defined
+                    if (!STACK[id]) {
+
+                        deps = deps || [];
+
+                        STACK[id] = {
+                            executed: false,
+                            exports: {},
+                            deps: deps, // dependencies
+                            factory: factory
+                        };
+
+                    }
 
                 }
 
