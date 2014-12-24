@@ -60,6 +60,13 @@ var Modulr = (function(window, app){
             };
 
             /**
+             * get a specific instance via context
+             */
+            Proto.getInstance = function(context) {
+                return (MODULR_STACK[context]) ? MODULR_STACK[context].instance : null;
+            };
+
+            /**
              * define
              */
             Proto.define = function(id, deps, factory) {
@@ -68,7 +75,7 @@ var Modulr = (function(window, app){
                     throwError("invalid id: '" + id + "'.");
                 }
 
-                var ext = isExtendedModule(id);
+                var ext = isExtendedInstance(id);
 
                 // extended module definition
                 if (ext) {
@@ -170,6 +177,7 @@ var Modulr = (function(window, app){
                     
                     delete instance.config; // remote instantiation access
                     delete instance.ready; // no need for ready state
+                    delete instance.getInstance; // remove call from instances
 
                     return instance;
 
@@ -213,19 +221,36 @@ var Modulr = (function(window, app){
              */
             function getDefinedModule(id) {
 
-                var stack,
-                    ext = isExtendedModule(id);
+                var stack = null,
+                    type = "module",
+                    ext = isExtendedInstance(id);
+
 
                 if (ext) {
-                    stack = MODULR_STACK[ext.context].stack[ext.id];
+
+                    if (ext.type === "module") {
+                        stack = MODULR_STACK[ext.context].stack[ext.id];
+                    } else if (ext.type === "instance") {
+                        stack = MODULR_STACK[ext.context].instance;
+                        type = "instance";
+                    }
+
                 } else {
                     stack = STACK[id];
                 }
 
-                if (stack && !stack.executed) {
-                    throwError("module not yet executed: '"+id+"'");
+                if (type === "module") {
+
+                    if (stack && !stack.executed) {
+                        throwError("module not yet executed: '"+id+"'");
+                    }
+
+                    stack = (stack) ? (stack.factory || stack.exports) : null;
+
                 }
-                return (stack) ? (stack.factory || stack.exports) : null;
+
+                return stack;
+
             }
 
 
@@ -277,14 +302,26 @@ var Modulr = (function(window, app){
                         } else {
 
                             var id = arr.shift(),
-                                module = getStack(id);
+                                module = getStack(id),
+                                ext = isExtendedInstance(id);
 
-                            if (isExtendedModule(id)) {
-                                // extended modules are existing contexts
-                                getExtendedModule(id, function(extFactory){
-                                    args.push(extFactory || null);
+                            if (ext) {
+
+                                if (ext.type === "module") {
+
+                                    // extended modules are existing contexts
+                                    getExtendedModule(id, function(extFactory){
+                                        args.push(extFactory || null);
+                                        getDeps();
+                                    });
+
+                                } else if (ext.type === "instance") {
+
+                                    args.push(getExtendedInstance(ext.context));
                                     getDeps();
-                                });
+
+                                }
+
                             } else if (id === "require") {
                                 args.push(Proto.require);
                                 getDeps();
@@ -492,20 +529,41 @@ var Modulr = (function(window, app){
                 
             }
 
-            function isExtendedModule(id) {
+            function getExtendedInstance(context) {
 
-                var extended = (id.indexOf(":") > -1) ? true : false,
+                if (MODULR_STACK[context]) {
+                    return MODULR_STACK[context].instance;
+                } else {
+                    throwError("Error getting instance: " + context);
+                }
+
+            }
+
+            function isExtendedInstance(id) {
+
+                var found = (id.indexOf(":") > -1) ? true : false,
                     sp = id.split(":"),
                     context = sp[0] || false,
                     moduleId = sp[1] || false,
                     ret = false;
 
-                if (extended && context && moduleId && MODULR_STACK[context]) {
+                if (found) {
 
-                    ret = {
-                        context: context,
-                        id: moduleId
-                    };
+                    // check if instance
+                    if (context === "getInstance" && moduleId) {
+
+                        ret = {
+                            type: "instance",
+                            context: moduleId
+                        };
+
+                    } else if (context && moduleId && MODULR_STACK[context]) {
+                        ret = {
+                            type: "module",
+                            context: context,
+                            id: moduleId
+                        };
+                    }
 
                 }
 

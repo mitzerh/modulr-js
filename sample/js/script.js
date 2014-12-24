@@ -15,12 +15,16 @@
         }
     });
 
-    Modulr.require(["require", "app1/main", "someExternalScript", "MyFoo:foobar"], function(require){
+    Modulr.require(["require", "app1/main", "someExternalScript", "MyFoo:foobar", "getInstance:MyFoo"], function(require){
 
-        console.log(require("MyFoo:foobar"))
+        console.log("GET INSTANCE HERE");
+        console.log(require("getInstance:MyFoo"))
 
         console.log("LOADED SON");
         console.log(window.foo_bear);
+
     });
+
+
 
 }());
