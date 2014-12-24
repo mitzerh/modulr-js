@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.2.7 | 2014-12-17
+* modulr-js v0.2.7 | 2014-12-24
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -178,10 +178,43 @@ var Modulr = (function(window, app){
             };
 
             /**
+             * external module execution
+             */
+            Proto.execModule = function(id, callback) {
+                var module = getStack(id);
+
+                if (typeof callback !== "function") { return false; }
+
+                if (!module) {
+                    callback(null);
+                } else {
+
+                    if (module.executed) {
+                        callback(MODULE.getModuleFactory(module));
+                    } else {
+                        MODULE.execModule(null, null, id, function(factory){
+                            callback(factory);
+                        });
+                    }
+
+                }
+
+            };
+
+            /**
              * get stack from require
              */
             function getDefinedModule(id) {
-                var stack = STACK[id];
+
+                var stack,
+                    ext = isExtendedModule(id);
+
+                if (ext) {
+                    stack = MODULR_STACK[ext.context].stack[ext.id];
+                } else {
+                    stack = STACK[id];
+                }
+
                 if (stack && !stack.executed) {
                     throwError("module not yet executed: '"+id+"'");
                 }
@@ -239,7 +272,13 @@ var Modulr = (function(window, app){
                             var id = arr.shift(),
                                 module = getStack(id);
 
-                            if (id === "require") {
+                            if (isExtendedModule(id)) {
+                                // extended modules are existing contexts
+                                getExtendedModule(id, function(extFactory){
+                                    args.push(extFactory || null);
+                                    getDeps();
+                                });
+                            } else if (id === "require") {
                                 args.push(Proto.require);
                                 getDeps();
                             } else if (id === "define") {
@@ -362,6 +401,66 @@ var Modulr = (function(window, app){
                 };
 
                 getDeps();
+
+            }
+
+            function getExtendedModule(id, callback) {
+                var sp = id.split(":"),
+                    context = sp[0] || false,
+                    moduleId = sp[1] || false;
+
+                if (context && moduleId && MODULR_STACK[context]) {
+
+                    var instance = MODULR_STACK[context].instance;
+
+                    // if module already defined
+                    if (MODULR_STACK[context].stack[moduleId]) {
+
+                        instance.execModule(moduleId, function(factory){
+                            callback(factory);
+                        });
+
+                    } else {
+
+                        // attempt to load module
+                        instance.require([moduleId], function(){
+
+                            instance.execModule(moduleId, function(factory){
+                                callback(factory);
+                            });
+                                
+                        });
+
+                    }
+                    
+                } else {
+
+                    log(["Not initialized >> CONTEXT: ", context, " | module: ", moduleId].join(""));
+
+                    callback(null);
+
+                }
+                
+            }
+
+            function isExtendedModule(id) {
+
+                var extended = (id.indexOf(":") > -1) ? true : false,
+                    sp = id.split(":"),
+                    context = sp[0] || false,
+                    moduleId = sp[1] || false,
+                    ret = false;
+
+                if (extended && context && moduleId && MODULR_STACK[context]) {
+
+                    ret = {
+                        context: context,
+                        id: moduleId
+                    };
+
+                }
+
+                return ret;
 
             }
 

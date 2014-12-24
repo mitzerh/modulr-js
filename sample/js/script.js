@@ -15,8 +15,11 @@
         }
     });
 
-    Modulr.require(["app1/main", "someExternalScript"], function(){
-        console.log("LOADED");
+    Modulr.require(["require", "app1/main", "someExternalScript", "MyFoo:foobar"], function(require){
+
+        console.log(require("MyFoo:foobar"))
+
+        console.log("LOADED SON");
         console.log(window.foo_bear);
     });
 
