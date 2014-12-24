@@ -336,11 +336,42 @@ var Modulr = (function(window, app){
                         module = getStack(id);
 
                     if (module) {
-                        self.get(id, module.deps, function(args){
-                            module.executed = true;
-                            module.factory = getFactory(module.factory, args);
+
+                        // if not yet executed
+                        if (!module.executed) {
+
+                            // create queue
+                            if (!self._execQueue) { self._execQueue = {}; }
+                            if (!self._execQueue[id]) { self._execQueue[id] = []; }
+
+                            // if still executing, queue
+                            if (!module.executing) {
+                                module.executing = true;
+
+                                // push to queue
+                                self._execQueue[id].push(callback);
+
+                                self.get(id, module.deps, function(args){
+                                    module.factory = getFactory(module.factory, args);
+                                    module.executed = true;
+                                    self.runCallbackQueue(id, self.getModuleFactory(module));
+                                    module.executing = false;
+                                });
+
+                            } else { // if already executing, wait and put to stack
+
+                                self._execQueue[id].push(callback);
+
+                            }
+
+                        } else {
+
+                            // if already executed return factory
                             callback(self.getModuleFactory(module));
-                        });
+
+                        }
+
+                        
                     } else {
                         
                         log("loading external source: " + src);
@@ -351,6 +382,17 @@ var Modulr = (function(window, app){
                             type: "external-script"
                         });
 
+                    }
+
+                };
+
+                App.prototype.runCallbackQueue = function(id, factory) {
+                    var self = this,
+                        queue = self._execQueue[id] || [];
+
+                    while (queue.length > 0) {
+                        var fn = queue.shift();
+                        fn(factory);
                     }
 
                 };
