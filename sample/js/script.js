@@ -15,9 +15,16 @@
         }
     });
 
-    Modulr.require(["app1/main", "someExternalScript"], function(){
-        console.log("LOADED");
+    Modulr.require(["require", "app1/main", "someExternalScript", "MyFoo:foobar", "getInstance:MyFoo"], function(require){
+
+        console.log("GET INSTANCE HERE");
+        console.log(require("getInstance:MyFoo"))
+
+        console.log("LOADED SON");
         console.log(window.foo_bear);
+
     });
+
+
 
 }());
