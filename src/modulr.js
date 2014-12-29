@@ -11,6 +11,8 @@ var Modulr = (function(window, app){
         CONST.prefix = "[Modulr]";
 
         var MODULR_STACK = {},
+            MODULR_STACK_QUEUE = {},
+            LOADED_SCRIPTS = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -83,6 +85,15 @@ var Modulr = (function(window, app){
                     if (MODULR_STACK[ext.context]) {
                         var instance = MODULR_STACK[ext.context].instance;
                         instance.define(ext.id, deps, factory);
+                    } else {
+
+                        // queue up if context has not been instantiated yet
+                        if (!MODULR_STACK_QUEUE[ext.context]) {
+                            MODULR_STACK_QUEUE[ext.context] = [];
+                        }
+
+                        MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
+
                     }
 
                 } else {
@@ -263,6 +274,10 @@ var Modulr = (function(window, app){
 
                 var isReady = function() {
                     INSTANCE_READY = true;
+
+                    // load queue
+                    loadInstanceQueue();
+
                     callback();
                 };
 
@@ -271,6 +286,21 @@ var Modulr = (function(window, app){
                     isReady();
                 });
                 
+            }
+
+            function loadInstanceQueue() {
+
+                if (MODULR_STACK_QUEUE[CONTEXT]) {
+
+                    var instance = MODULR_STACK[CONTEXT].instance;
+
+                    for (var i = 0; i < MODULR_STACK_QUEUE[CONTEXT].length; i++) {
+                        var item = MODULR_STACK_QUEUE[CONTEXT][i];
+                        instance.define(item.ext.id, item.deps, item.factory);
+                    }
+
+                }
+
             }
 
             // module functions
@@ -391,8 +421,8 @@ var Modulr = (function(window, app){
                                 self.get(id, module.deps, function(args){
                                     module.factory = getFactory(module.factory, args);
                                     module.executed = true;
-                                    self.runCallbackQueue(id, self.getModuleFactory(module));
                                     module.executing = false;
+                                    self.runCallbackQueue(id, self.getModuleFactory(module));
                                 });
 
                             } else { // if already executing, wait and put to stack
@@ -557,7 +587,7 @@ var Modulr = (function(window, app){
                             context: moduleId
                         };
 
-                    } else if (context && moduleId && MODULR_STACK[context]) {
+                    } else if (context && moduleId) {
                         ret = {
                             type: "module",
                             context: context,
@@ -600,16 +630,27 @@ var Modulr = (function(window, app){
                                 src = getShimSrc(info.src),
                                 deps = info.deps || [];
 
-                            loadScript(src, id, function(){
-                                if (!window[info.exports]) {
-                                    throwError("shim export not found for: '"+id+"'");
-                                } else {
-                                    Proto.define(id, deps, function(){
-                                        return window[info.exports];
-                                    });
-                                    getShim();
-                                }
-                            });
+                            var define = function() {
+                                Proto.define(id, deps, function(){
+                                    return window[info.exports];
+                                });
+                                getShim();
+                            };
+
+                            // if already defined exports, don't load script!
+                            if (window[info.exports]) {
+                                define();
+                            } else {
+
+                                loadScript(src, id, function(){
+                                    if (!window[info.exports]) {
+                                        throwError("shim export not found for: '"+id+"'");
+                                    } else {
+                                        define();
+                                    }
+                                });
+
+                            }
 
                         }
 
@@ -671,6 +712,11 @@ var Modulr = (function(window, app){
                     script.setAttribute("data-modulr-module", id);
                 }
                 script.setAttribute("data-modulr-context", CONTEXT);
+
+                var scriptId = [CONTEXT || "", id || "", src].join(":");
+                // load once
+                if (LOADED_SCRIPTS[scriptId]) { return false; }
+                LOADED_SCRIPTS[scriptId] = true;
                 
                 script.type = "text/javascript";
                 script.charset = "utf-8";

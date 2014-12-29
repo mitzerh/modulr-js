@@ -9,7 +9,7 @@ Modulr.define("app1/main", ["require", "app1/main2", "modernizr"], function(requ
 
 });
 
-Modulr.define("app1/main2", ["exports", "require", "jquery"], function(exports, require){
+Modulr.define("app1/main2", ["exports", "require", "jquery", "MyFoo:foobar"], function(exports, require){
 
     var $ = require("jquery");
     console.log("JQUERY", $)
