@@ -11,6 +11,7 @@ var Modulr = (function(window, app){
         CONST.prefix = "[Modulr]";
 
         var MODULR_STACK = {},
+            LOADED_SCRIPTS = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -391,8 +392,8 @@ var Modulr = (function(window, app){
                                 self.get(id, module.deps, function(args){
                                     module.factory = getFactory(module.factory, args);
                                     module.executed = true;
-                                    self.runCallbackQueue(id, self.getModuleFactory(module));
                                     module.executing = false;
+                                    self.runCallbackQueue(id, self.getModuleFactory(module));
                                 });
 
                             } else { // if already executing, wait and put to stack
@@ -682,6 +683,11 @@ var Modulr = (function(window, app){
                     script.setAttribute("data-modulr-module", id);
                 }
                 script.setAttribute("data-modulr-context", CONTEXT);
+
+                var scriptId = [CONTEXT || "", id || "", src].join(":");
+                // load once
+                if (LOADED_SCRIPTS[scriptId]) { return false; }
+                LOADED_SCRIPTS[scriptId] = true;
                 
                 script.type = "text/javascript";
                 script.charset = "utf-8";
