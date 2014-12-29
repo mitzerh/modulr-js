@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.3.3 | 2014-12-24
+* modulr-js v0.3.4 | 2014-12-29
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -56,7 +56,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.3.3";
+            Proto.version = "0.3.4";
 
 
             /**
@@ -607,16 +607,27 @@ var Modulr = (function(window, app){
                                 src = getShimSrc(info.src),
                                 deps = info.deps || [];
 
-                            loadScript(src, id, function(){
-                                if (!window[info.exports]) {
-                                    throwError("shim export not found for: '"+id+"'");
-                                } else {
-                                    Proto.define(id, deps, function(){
-                                        return window[info.exports];
-                                    });
-                                    getShim();
-                                }
-                            });
+                            var define = function() {
+                                Proto.define(id, deps, function(){
+                                    return window[info.exports];
+                                });
+                                getShim();
+                            };
+
+                            // if already defined exports, don't load script!
+                            if (window[info.exports]) {
+                                define();
+                            } else {
+
+                                loadScript(src, id, function(){
+                                    if (!window[info.exports]) {
+                                        throwError("shim export not found for: '"+id+"'");
+                                    } else {
+                                        define();
+                                    }
+                                });
+
+                            }
 
                         }
 
