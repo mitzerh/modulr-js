@@ -18,6 +18,7 @@ var Modulr = (function(window, app){
         CONST.prefix = "[Modulr]";
 
         var MODULR_STACK = {},
+            MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
             DOM_READY = false,
             PAGE_READY = false;
@@ -91,6 +92,15 @@ var Modulr = (function(window, app){
                     if (MODULR_STACK[ext.context]) {
                         var instance = MODULR_STACK[ext.context].instance;
                         instance.define(ext.id, deps, factory);
+                    } else {
+
+                        // queue up if context has not been instantiated yet
+                        if (!MODULR_STACK_QUEUE[ext.context]) {
+                            MODULR_STACK_QUEUE[ext.context] = [];
+                        }
+
+                        MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
+
                     }
 
                 } else {
@@ -271,6 +281,10 @@ var Modulr = (function(window, app){
 
                 var isReady = function() {
                     INSTANCE_READY = true;
+
+                    // load queue
+                    loadInstanceQueue();
+
                     callback();
                 };
 
@@ -279,6 +293,21 @@ var Modulr = (function(window, app){
                     isReady();
                 });
                 
+            }
+
+            function loadInstanceQueue() {
+
+                if (MODULR_STACK_QUEUE[CONTEXT]) {
+
+                    var instance = MODULR_STACK[CONTEXT].instance;
+
+                    for (var i = 0; i < MODULR_STACK_QUEUE[CONTEXT].length; i++) {
+                        var item = MODULR_STACK_QUEUE[CONTEXT][i];
+                        instance.define(item.ext.id, item.deps, item.factory);
+                    }
+
+                }
+
             }
 
             // module functions
@@ -565,7 +594,7 @@ var Modulr = (function(window, app){
                             context: moduleId
                         };
 
-                    } else if (context && moduleId && MODULR_STACK[context]) {
+                    } else if (context && moduleId) {
                         ret = {
                             type: "module",
                             context: context,
