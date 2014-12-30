@@ -77,6 +77,8 @@ var Modulr = (function(window, app){
                     throwError("invalid id: '" + id + "'.");
                 }
 
+                id = processDepsPath(id);
+
                 var ext = isExtendedInstance(id);
 
                 // extended module definition
@@ -97,8 +99,6 @@ var Modulr = (function(window, app){
                     }
 
                 } else {
-
-                    id = processDepsPath(id);
 
                     // only define if not yet defined
                     if (!STACK[id]) {
@@ -234,6 +234,8 @@ var Modulr = (function(window, app){
              */
             function getDefinedModule(id) {
 
+                id = processDepsPath(id);
+
                 var stack = null,
                     type = "module",
                     ext = isExtendedInstance(id);
@@ -249,7 +251,7 @@ var Modulr = (function(window, app){
 
                 } else {
 
-                    stack = STACK[processDepsPath(id)];
+                    stack = STACK[id];
 
                 }
 
@@ -352,13 +354,9 @@ var Modulr = (function(window, app){
 
                         } else {
 
-                            var id = arr.shift(),
+                            var id = processDepsPath(arr.shift()),
                                 module = getStack(id),
                                 ext = isExtendedInstance(id);
-
-                            if (!ext) {
-                                id = processDepsPath(id);
-                            }
 
                             if (ext) {
 
