@@ -657,18 +657,18 @@ var Modulr = (function(window, app){
 
                             var define = function() {
                                 Proto.define(id, deps, function(){
-                                    return window[info.exports];
+                                    return window[info.exports.split(".")[0]];
                                 });
                                 getShim();
                             };
 
                             // if already defined exports, don't load script!
-                            if (window[info.exports]) {
+                            if (isExportsDefined(info.exports)) {
                                 define();
                             } else {
 
                                 loadScript(src, id, function(){
-                                    if (!window[info.exports]) {
+                                    if (!isExportsDefined(info.exports)) {
                                         throwError("shim export not found for: '"+id+"'");
                                     } else {
                                         define();
@@ -791,6 +791,36 @@ var Modulr = (function(window, app){
             }
 
             return ret;
+        }
+        /**
+         * check if shim exports is defined
+         */
+        function isExportsDefined(exports) {
+
+            var ex = exports.split("."),
+                tmp = window[ex.shift()],
+                ret = false;
+
+            if (typeof tmp !== "undefined") {
+
+                ret = true;
+
+                if (ex.length > 1) {
+
+                    while (ex.length > 0) {
+                        tmp = tmp[ex.shift()];
+                        if (typeof tmp === "undefined") {
+                            ret = false;
+                            break;
+                        }
+                    }
+
+                }
+            
+            }
+
+            return ret;
+
         }
 
         /**

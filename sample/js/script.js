@@ -9,7 +9,7 @@
             "jquery": {
                 deps: ["modernizr"],
                 src: "//global.fncstatic.com/static/v/all/js/ag.jquery.js",
-                exports: "jQuery"
+                exports: "jQuery.ready"
             },
             "modernizr": {
                 src: "//global.fncstatic.com/static/v/all/js/modernizr/modernizr.js",
