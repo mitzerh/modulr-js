@@ -98,6 +98,8 @@ var Modulr = (function(window, app){
 
                 } else {
 
+                    id = processDepsPath(id);
+
                     // only define if not yet defined
                     if (!STACK[id]) {
 
@@ -236,7 +238,6 @@ var Modulr = (function(window, app){
                     type = "module",
                     ext = isExtendedInstance(id);
 
-
                 if (ext) {
 
                     if (ext.type === "module") {
@@ -247,7 +248,9 @@ var Modulr = (function(window, app){
                     }
 
                 } else {
-                    stack = STACK[id];
+
+                    stack = STACK[processDepsPath(id)];
+
                 }
 
                 if (type === "module") {
@@ -303,6 +306,24 @@ var Modulr = (function(window, app){
 
             }
 
+            // process config paths
+            function processDepsPath(deps) {
+
+                if (CONFIG.paths) {
+
+                    for (var i in CONFIG.paths) {
+                        deps = deps.replace(i, CONFIG.paths[i]);
+                    }
+
+                }
+
+                // replace double slash
+                deps = deps.replace(/\/\//g, "/");
+
+                return deps;
+
+            }
+
             // module functions
             var MODULE = (function(){
 
@@ -334,6 +355,10 @@ var Modulr = (function(window, app){
                             var id = arr.shift(),
                                 module = getStack(id),
                                 ext = isExtendedInstance(id);
+
+                            if (!ext) {
+                                id = processDepsPath(id);
+                            }
 
                             if (ext) {
 

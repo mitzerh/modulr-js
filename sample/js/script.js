@@ -2,6 +2,9 @@
 
     Modulr.config({
         baseUrl: "/test/modulr/sample/js",
+        paths: {
+            "@original-son": "app1/"
+        },
         shim: {
             "jquery": {
                 deps: ["modernizr"],
@@ -15,7 +18,7 @@
         }
     });
 
-    Modulr.require(["require", "app1/main", "someExternalScript", "MyFoo:foobar", "getInstance:MyFoo"], function(require){
+    Modulr.require(["require", "@original-son/main", "someExternalScript", "MyFoo:foobar", "getInstance:MyFoo"], function(require){
 
         console.log("GET INSTANCE HERE");
         console.log(require("getInstance:MyFoo"))

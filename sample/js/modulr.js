@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.3.5 | 2014-12-29
+* modulr-js v0.3.6 | 2014-12-30
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -58,7 +58,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.3.5";
+            Proto.version = "0.3.6";
 
 
             /**
@@ -104,6 +104,8 @@ var Modulr = (function(window, app){
                     }
 
                 } else {
+
+                    id = processDepsPath(id);
 
                     // only define if not yet defined
                     if (!STACK[id]) {
@@ -243,7 +245,6 @@ var Modulr = (function(window, app){
                     type = "module",
                     ext = isExtendedInstance(id);
 
-
                 if (ext) {
 
                     if (ext.type === "module") {
@@ -254,7 +255,9 @@ var Modulr = (function(window, app){
                     }
 
                 } else {
-                    stack = STACK[id];
+
+                    stack = STACK[processDepsPath(id)];
+
                 }
 
                 if (type === "module") {
@@ -310,6 +313,24 @@ var Modulr = (function(window, app){
 
             }
 
+            // process config paths
+            function processDepsPath(deps) {
+
+                if (CONFIG.paths) {
+
+                    for (var i in CONFIG.paths) {
+                        deps = deps.replace(i, CONFIG.paths[i]);
+                    }
+
+                }
+
+                // replace double slash
+                deps = deps.replace(/\/\//g, "/");
+
+                return deps;
+
+            }
+
             // module functions
             var MODULE = (function(){
 
@@ -341,6 +362,10 @@ var Modulr = (function(window, app){
                             var id = arr.shift(),
                                 module = getStack(id),
                                 ext = isExtendedInstance(id);
+
+                            if (!ext) {
+                                id = processDepsPath(id);
+                            }
 
                             if (ext) {
 
