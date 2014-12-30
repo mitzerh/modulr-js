@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.3.7 | 2014-12-30
+* modulr-js v0.3.9 | 2014-12-30
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -58,7 +58,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.3.7";
+            Proto.version = "0.3.9";
 
 
             /**
@@ -79,9 +79,16 @@ var Modulr = (function(window, app){
              * define
              */
             Proto.define = function(id, deps, factory) {
+
                 // if invalid id
                 if (!isValidId(id)) {
                     throwError("invalid id: '" + id + "'.");
+                }
+
+                // id and factory only
+                if (arguments.length === 2 && !isArray(deps)) {
+                    factory = deps;
+                    deps = [];
                 }
 
                 id = processDepsPath(id);
@@ -295,11 +302,17 @@ var Modulr = (function(window, app){
 
                 // load shim
                 loadShim(function(){
-                    isReady();
+
+                    // load other included instances
+                    loadIncludeInstance(function(){
+                        isReady();
+                    });
+                    
                 });
                 
             }
 
+            // load other included instances
             function loadInstanceQueue() {
 
                 if (MODULR_STACK_QUEUE[CONTEXT]) {
@@ -692,6 +705,55 @@ var Modulr = (function(window, app){
 
             }
 
+            // load other included instances
+            function loadIncludeInstance(callback) {
+
+                if (!CONFIG.includeInstance) {
+                    
+                    callback();
+
+                } else {
+
+                    var arr = [];
+
+                    for (var uid in CONFIG.includeInstance) {
+                        arr.push({
+                            uid: uid,
+                            src: CONFIG.includeInstance[uid]
+                        });
+                    }
+
+                    var getInstance = function() {
+
+                        if (arr.length === 0) {
+                            callback();
+                        } else {
+
+                            var obj = arr.shift(),
+                                uid = obj.uid,
+                                src = obj.src;
+
+                            if (MODULR_STACK[uid]) {
+                                getInstance();
+                            } else {
+
+                                loadScript(src, uid, function(){
+                                    getInstance();
+                                }, "instance");
+
+                            }
+
+                        }
+
+                    };
+
+                    getInstance();
+
+                }
+
+            }
+
+
             function getShimSrc(src) {
                 var ret = src;
 
@@ -708,7 +770,7 @@ var Modulr = (function(window, app){
              * loadScript
              * Credit to partial implementation: RequireJS
              */
-            function loadScript(src, id, callback) {
+            function loadScript(src, id, callback, specType) {
 
                 var loaded = false,
                     script = document.createElement("script");
@@ -739,7 +801,15 @@ var Modulr = (function(window, app){
                 };
 
                 if (id) {
-                    script.setAttribute("data-modulr-module", id);
+
+                    var idAttrName = "data-modulr-module";
+
+                    if (specType) {
+                        idAttrName = "data-modulr-loaded-inst";
+                    }
+                    
+                    script.setAttribute(idAttrName, id);
+                    
                 }
                 script.setAttribute("data-modulr-context", CONTEXT);
 
