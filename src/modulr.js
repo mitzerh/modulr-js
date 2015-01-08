@@ -13,6 +13,7 @@ var Modulr = (function(window, app){
         var MODULR_STACK = {},
             MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
+            LOADED_INSTANCE_INCLUDES = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -727,8 +728,12 @@ var Modulr = (function(window, app){
                                 src = obj.src;
 
                             if (MODULR_STACK[uid]) {
+
                                 getInstance();
-                            } else {
+                                
+                            } else if (!LOADED_INSTANCE_INCLUDES[src]) {
+
+                                LOADED_INSTANCE_INCLUDES[src] = uid;
 
                                 loadScript(src, uid, function(){
                                     getInstance();
