@@ -29,7 +29,7 @@ var Modulr = (function(window, app){
 
             CONFIG = CONFIG || {};
             // default context
-            CONFIG.context = CONFIG.context || "_";
+            CONFIG.context = CONFIG.instance || CONFIG.context || "_";
             // wait for DOM or PAGE ready (true default)
             CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
@@ -184,7 +184,7 @@ var Modulr = (function(window, app){
              */
             Proto.config = function(config) {
 
-                if (!config.context) {
+                if (!config.context && !config.instance) {
 
                     if (INSTANCE_INIT) {
                         throwError("cannot re-configure Modulr");
@@ -730,7 +730,7 @@ var Modulr = (function(window, app){
                             if (MODULR_STACK[uid]) {
 
                                 getInstance();
-                                
+
                             } else if (!LOADED_INSTANCE_INCLUDES[src]) {
 
                                 LOADED_INSTANCE_INCLUDES[src] = uid;
