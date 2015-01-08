@@ -1,5 +1,5 @@
 var MY_FOO = Modulr.config({
-    context: "MyFoo",
+    instance: "MyFoo",
     baseUrl: "/test/modulr/sample/js/app2"
 });
 

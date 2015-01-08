@@ -13,6 +13,7 @@ var Modulr = (function(window, app){
         var MODULR_STACK = {},
             MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
+            LOADED_INSTANCE_INCLUDES = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -28,7 +29,7 @@ var Modulr = (function(window, app){
 
             CONFIG = CONFIG || {};
             // default context
-            CONFIG.context = CONFIG.context || "_";
+            CONFIG.context = CONFIG.instance || CONFIG.context || "_";
             // wait for DOM or PAGE ready (true default)
             CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
@@ -72,10 +73,19 @@ var Modulr = (function(window, app){
              * define
              */
             Proto.define = function(id, deps, factory) {
+
                 // if invalid id
                 if (!isValidId(id)) {
                     throwError("invalid id: '" + id + "'.");
                 }
+
+                // id and factory only
+                if (arguments.length === 2 && !isArray(deps)) {
+                    factory = deps;
+                    deps = [];
+                }
+
+                id = processDepsPath(id);
 
                 var ext = isExtendedInstance(id);
 
@@ -174,7 +184,7 @@ var Modulr = (function(window, app){
              */
             Proto.config = function(config) {
 
-                if (!config.context) {
+                if (!config.context && !config.instance) {
 
                     if (INSTANCE_INIT) {
                         throwError("cannot re-configure Modulr");
@@ -232,10 +242,11 @@ var Modulr = (function(window, app){
              */
             function getDefinedModule(id) {
 
+                id = processDepsPath(id);
+
                 var stack = null,
                     type = "module",
                     ext = isExtendedInstance(id);
-
 
                 if (ext) {
 
@@ -247,7 +258,9 @@ var Modulr = (function(window, app){
                     }
 
                 } else {
+
                     stack = STACK[id];
+
                 }
 
                 if (type === "module") {
@@ -283,11 +296,17 @@ var Modulr = (function(window, app){
 
                 // load shim
                 loadShim(function(){
-                    isReady();
+
+                    // load other included instances
+                    loadIncludeInstance(function(){
+                        isReady();
+                    });
+                    
                 });
                 
             }
 
+            // load other included instances
             function loadInstanceQueue() {
 
                 if (MODULR_STACK_QUEUE[CONTEXT]) {
@@ -300,6 +319,24 @@ var Modulr = (function(window, app){
                     }
 
                 }
+
+            }
+
+            // process config paths
+            function processDepsPath(deps) {
+
+                if (CONFIG.paths) {
+
+                    for (var i in CONFIG.paths) {
+                        deps = deps.replace(i, CONFIG.paths[i]);
+                    }
+
+                }
+
+                // replace double slash
+                deps = deps.replace(/\/\//g, "/");
+
+                return deps;
 
             }
 
@@ -331,7 +368,7 @@ var Modulr = (function(window, app){
 
                         } else {
 
-                            var id = arr.shift(),
+                            var id = processDepsPath(arr.shift()),
                                 module = getStack(id),
                                 ext = isExtendedInstance(id);
 
@@ -632,18 +669,18 @@ var Modulr = (function(window, app){
 
                             var define = function() {
                                 Proto.define(id, deps, function(){
-                                    return window[info.exports];
+                                    return window[info.exports.split(".")[0]];
                                 });
                                 getShim();
                             };
 
                             // if already defined exports, don't load script!
-                            if (window[info.exports]) {
+                            if (isExportsDefined(info.exports)) {
                                 define();
                             } else {
 
                                 loadScript(src, id, function(){
-                                    if (!window[info.exports]) {
+                                    if (!isExportsDefined(info.exports)) {
                                         throwError("shim export not found for: '"+id+"'");
                                     } else {
                                         define();
@@ -662,6 +699,59 @@ var Modulr = (function(window, app){
 
             }
 
+            // load other included instances
+            function loadIncludeInstance(callback) {
+
+                if (!CONFIG.includeInstance) {
+                    
+                    callback();
+
+                } else {
+
+                    var arr = [];
+
+                    for (var uid in CONFIG.includeInstance) {
+                        arr.push({
+                            uid: uid,
+                            src: CONFIG.includeInstance[uid]
+                        });
+                    }
+
+                    var getInstance = function() {
+
+                        if (arr.length === 0) {
+                            callback();
+                        } else {
+
+                            var obj = arr.shift(),
+                                uid = obj.uid,
+                                src = obj.src;
+
+                            if (MODULR_STACK[uid]) {
+
+                                getInstance();
+
+                            } else if (!LOADED_INSTANCE_INCLUDES[src]) {
+
+                                LOADED_INSTANCE_INCLUDES[src] = uid;
+
+                                loadScript(src, uid, function(){
+                                    getInstance();
+                                }, "instance");
+
+                            }
+
+                        }
+
+                    };
+
+                    getInstance();
+
+                }
+
+            }
+
+
             function getShimSrc(src) {
                 var ret = src;
 
@@ -678,7 +768,7 @@ var Modulr = (function(window, app){
              * loadScript
              * Credit to partial implementation: RequireJS
              */
-            function loadScript(src, id, callback) {
+            function loadScript(src, id, callback, specType) {
 
                 var loaded = false,
                     script = document.createElement("script");
@@ -709,7 +799,15 @@ var Modulr = (function(window, app){
                 };
 
                 if (id) {
-                    script.setAttribute("data-modulr-module", id);
+
+                    var idAttrName = "data-modulr-module";
+
+                    if (specType) {
+                        idAttrName = "data-modulr-loaded-inst";
+                    }
+                    
+                    script.setAttribute(idAttrName, id);
+                    
                 }
                 script.setAttribute("data-modulr-context", CONTEXT);
 
@@ -766,6 +864,36 @@ var Modulr = (function(window, app){
             }
 
             return ret;
+        }
+        /**
+         * check if shim exports is defined
+         */
+        function isExportsDefined(exports) {
+
+            var ex = exports.split("."),
+                tmp = window[ex.shift()],
+                ret = false;
+
+            if (typeof tmp !== "undefined") {
+
+                ret = true;
+
+                if (ex.length > 1) {
+
+                    while (ex.length > 0) {
+                        tmp = tmp[ex.shift()];
+                        if (typeof tmp === "undefined") {
+                            ret = false;
+                            break;
+                        }
+                    }
+
+                }
+            
+            }
+
+            return ret;
+
         }
 
         /**
