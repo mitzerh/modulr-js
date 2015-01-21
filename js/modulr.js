@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.3.9 | 2015-01-08
+* modulr-js v0.4.1 | 2015-01-21
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -59,7 +59,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.3.9";
+            Proto.version = "0.4.1";
 
 
             /**
@@ -276,7 +276,7 @@ var Modulr = (function(window, app){
                         throwError("module not yet executed: '"+id+"'");
                     }
 
-                    stack = (stack) ? (stack.factory || stack.exports) : null;
+                    stack = (stack) ? (stack.factory !== null) ? stack.factory : (stack.exports !== null) ? stack.exports : null : null;
 
                 }
 
@@ -304,8 +304,8 @@ var Modulr = (function(window, app){
                 // load shim
                 loadShim(function(){
 
-                    // load other included instances
-                    loadIncludeInstance(function(){
+                    // load other modulr packages
+                    loadPackages(function(){
                         isReady();
                     });
                     
@@ -509,7 +509,7 @@ var Modulr = (function(window, app){
                 };
 
                 App.prototype.getModuleFactory = function(module){
-                    return module.factory || module.exports;
+                    return (module.factory !== null) ? module.factory : module.exports;
                 };
 
                 App.prototype.getModulePath = function(id) {
@@ -707,9 +707,9 @@ var Modulr = (function(window, app){
             }
 
             // load other included instances
-            function loadIncludeInstance(callback) {
+            function loadPackages(callback) {
 
-                if (!CONFIG.includeInstance) {
+                if (!CONFIG.packages) {
                     
                     callback();
 
@@ -717,10 +717,10 @@ var Modulr = (function(window, app){
 
                     var arr = [];
 
-                    for (var uid in CONFIG.includeInstance) {
+                    for (var uid in CONFIG.packages) {
                         arr.push({
                             uid: uid,
-                            src: CONFIG.includeInstance[uid]
+                            src: CONFIG.packages[uid]
                         });
                     }
 
