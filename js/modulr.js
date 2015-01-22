@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.1 | 2015-01-21
+* modulr-js v0.4.2 | 2015-01-22
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -59,7 +59,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.1";
+            Proto.version = "0.4.2";
 
 
             /**
@@ -276,7 +276,7 @@ var Modulr = (function(window, app){
                         throwError("module not yet executed: '"+id+"'");
                     }
 
-                    stack = (stack) ? (stack.factory !== null) ? stack.factory : (stack.exports !== null) ? stack.exports : null : null;
+                    stack = (stack) ? (typeof stack.factory !== "undefined") ? stack.factory : stack.exports : null;
 
                 }
 
@@ -385,7 +385,7 @@ var Modulr = (function(window, app){
 
                                     // extended modules are existing contexts
                                     getExtendedModule(id, function(extFactory){
-                                        args.push(extFactory || null);
+                                        args.push((extFactory !== null) ? extFactory : null);
                                         getDeps();
                                     });
 
