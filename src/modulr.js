@@ -269,7 +269,7 @@ var Modulr = (function(window, app){
                         throwError("module not yet executed: '"+id+"'");
                     }
 
-                    stack = (stack) ? (stack.factory !== null) ? stack.factory : (stack.exports !== null) ? stack.exports : null : null;
+                    stack = (stack) ? (typeof stack.factory !== "undefined") ? stack.factory : stack.exports : null;
 
                 }
 
@@ -378,7 +378,7 @@ var Modulr = (function(window, app){
 
                                     // extended modules are existing contexts
                                     getExtendedModule(id, function(extFactory){
-                                        args.push(extFactory || null);
+                                        args.push((extFactory !== null) ? extFactory : null);
                                         getDeps();
                                     });
 
