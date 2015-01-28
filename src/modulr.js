@@ -378,7 +378,7 @@ var Modulr = (function(window, app){
 
                                     // extended modules are existing contexts
                                     getExtendedModule(id, function(extFactory){
-                                        args.push((extFactory !== null) ? extFactory : null);
+                                        args.push((typeof extFactory !== "undefined") ? extFactory : null);
                                         getDeps();
                                     });
 
