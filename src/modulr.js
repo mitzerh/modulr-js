@@ -14,6 +14,7 @@ var Modulr = (function(window, app){
             MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
             LOADED_INSTANCE_INCLUDES = {},
+            LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -715,8 +716,23 @@ var Modulr = (function(window, app){
                             uid: uid,
                             src: CONFIG.packages[uid]
                         });
+
                     }
 
+                    // load the instance stack that has the same queue
+                    var loadInstanceStackQueue = function(srcId) {
+
+                        var queue = LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
+
+                        while (queue.length > 0) {
+                            var exec_queue = queue.shift();
+                            exec_queue();
+                        }
+
+                        delete LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
+
+                    };
+                    
                     var getInstance = function() {
 
                         if (arr.length === 0) {
@@ -731,14 +747,29 @@ var Modulr = (function(window, app){
 
                                 getInstance();
 
-                            } else if (!LOADED_INSTANCE_INCLUDES[src]) {
+                            } else { 
 
-                                LOADED_INSTANCE_INCLUDES[src] = uid;
+                                if (!LOADED_INSTANCE_INCLUDES[src]) {
 
-                                loadScript(src, uid, function(){
-                                    getInstance();
-                                }, "instance");
+                                    LOADED_INSTANCE_INCLUDES[src] = uid;
 
+                                    loadScript(src, uid, function(){
+                                        getInstance();
+                                        if (LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src]) {
+                                            loadInstanceStackQueue(src);
+                                        }
+                                    }, "instance");
+
+                                } else {
+
+                                    if (!LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src]) { LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src] = []; }
+
+                                    LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src].push(function(){
+                                        getInstance();
+                                    });
+
+                                }
+                             
                             }
 
                         }
