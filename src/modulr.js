@@ -747,7 +747,7 @@ var Modulr = (function(window, app){
 
                                 getInstance();
 
-                            } else { 
+                            } else {
 
                                 if (!LOADED_INSTANCE_INCLUDES[src]) {
 
