@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.3 | 2015-02-03
+* modulr-js v0.4.4 | 2015-02-12
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -60,7 +60,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.3";
+            Proto.version = "0.4.4";
 
 
             /**
@@ -75,6 +75,35 @@ var Modulr = (function(window, app){
              */
             Proto.getInstance = function(context) {
                 return (MODULR_STACK[context]) ? MODULR_STACK[context].instance : null;
+            };
+
+            /**
+             * get externally loaded scripts - useful for managing aggregates
+             * to see what else needs to be included in the aggregate
+             * so you don't load these scripts individually
+             */
+            Proto.getLoadedScripts = function() {
+                var scripts = {};
+
+                for (var item in LOADED_SCRIPTS) {
+
+                    var sp = item.split(":"),
+                        context = sp[0],
+                        id = sp[1] || "",
+                        url = sp[2] || "";
+
+                    if (context && url) {
+                        if (!scripts[context]) { scripts[context] = []; }
+
+                        scripts[context].push({
+                            id: id,
+                            url: url
+                        });
+
+                    }
+
+                }
+                return scripts;
             };
 
             /**
