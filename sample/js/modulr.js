@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.4 | 2015-02-12
+* modulr-js v0.4.5 | 2015-02-13
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -60,7 +60,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.4";
+            Proto.version = "0.4.5";
 
 
             /**
@@ -93,12 +93,14 @@ var Modulr = (function(window, app){
                         url = sp[2] || "";
 
                     if (context && url) {
-                        if (!scripts[context]) { scripts[context] = []; }
 
-                        scripts[context].push({
-                            id: id,
+                        if (!scripts[context]) { scripts[context] = {}; }
+
+                        id = id || "NO_ID";
+
+                        scripts[context][id] = {
                             url: url
-                        });
+                        };
 
                     }
 
