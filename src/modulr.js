@@ -86,12 +86,14 @@ var Modulr = (function(window, app){
                         url = sp[2] || "";
 
                     if (context && url) {
-                        if (!scripts[context]) { scripts[context] = []; }
 
-                        scripts[context].push({
-                            id: id,
+                        if (!scripts[context]) { scripts[context] = {}; }
+
+                        id = id || "NO_ID";
+
+                        scripts[context][id] = {
                             url: url
-                        });
+                        };
 
                     }
 
