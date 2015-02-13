@@ -89,18 +89,12 @@ var Modulr = (function(window, app){
 
                     var sp = item.split(":"),
                         context = sp[0],
-                        id = sp[1] || "",
-                        url = sp[2] || "";
+                        id = sp[1] || "";
 
-                    if (context && url) {
+                    if (context && id) {
 
-                        if (!scripts[context]) { scripts[context] = {}; }
-
-                        id = id || "NO_ID";
-
-                        scripts[context][id] = {
-                            url: url
-                        };
+                        if (!scripts[context]) { scripts[context] = []; }
+                        scripts[context].push(id);
 
                     }
 
