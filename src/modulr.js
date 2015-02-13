@@ -83,7 +83,7 @@ var Modulr = (function(window, app){
                     var sp = item.split(":"),
                         context = sp[0],
                         id = sp[1] || "",
-                        url = sp[2] || "";
+                        url = [sp.slice(2) || ""].join(":");
 
                     if (context && url) {
 
