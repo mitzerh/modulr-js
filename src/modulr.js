@@ -606,13 +606,16 @@ var Modulr = (function(window, app){
                     } else {
 
                         // attempt to load module
-                        instance.require([moduleId], function(){
-
-                            instance.execModule(moduleId, function(factory){
-                                callback(factory);
+                        // todo: resolve race condition with extended modules
+                        // temp solution is an extended module timeout
+                        setTimeout(function(){
+                            instance.require([moduleId], function(){
+                                instance.execModule(moduleId, function(factory){
+                                    callback(factory);
+                                });
                             });
-                                
-                        });
+                        }, 5);
+                        
 
                     }
                     

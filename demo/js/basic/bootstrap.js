@@ -24,7 +24,7 @@
             }
         }
     });
-    console.log(basic);
+    
     basic.require(["main"]);
 
 }());

@@ -174,7 +174,7 @@ Modulr.define("basic:helper", [
             }
         }
     });
-    console.log(basic);
+    
     basic.require(["main"]);
 
 }());

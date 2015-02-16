@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.5 | 2015-02-16
+* modulr-js v0.4.6 | 2015-02-16
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -62,7 +62,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.5";
+            Proto.version = "0.4.6";
 
 
             /**
@@ -613,13 +613,16 @@ var Modulr = (function(window, app){
                     } else {
 
                         // attempt to load module
-                        instance.require([moduleId], function(){
-
-                            instance.execModule(moduleId, function(factory){
-                                callback(factory);
+                        // todo: resolve race condition with extended modules
+                        // temp solution is an extended module timeout
+                        setTimeout(function(){
+                            instance.require([moduleId], function(){
+                                instance.execModule(moduleId, function(factory){
+                                    callback(factory);
+                                });
                             });
-                                
-                        });
+                        }, 5);
+                        
 
                     }
                     
