@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.4 | 2015-02-12
+* modulr-js v0.4.5 | 2015-02-16
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -22,6 +22,7 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
+            LOADED_SHIM_QUEUE = {},
             DOM_READY = false,
             PAGE_READY = false;
 
@@ -45,7 +46,8 @@ var Modulr = (function(window, app){
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
-                throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
+                return false;
+                //throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
             }
 
             MODULR_STACK[CONTEXT] = {
@@ -60,7 +62,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.4";
+            Proto.version = "0.4.5";
 
 
             /**
@@ -129,18 +131,16 @@ var Modulr = (function(window, app){
                 // extended module definition
                 if (ext) {
 
+                    // queue up if context has not been instantiated yet
+                    if (!MODULR_STACK_QUEUE[ext.context]) {
+                        MODULR_STACK_QUEUE[ext.context] = [];
+                    }
+
+                    MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
+
                     if (MODULR_STACK[ext.context]) {
                         var instance = MODULR_STACK[ext.context].instance;
                         instance.define(ext.id, deps, factory);
-                    } else {
-
-                        // queue up if context has not been instantiated yet
-                        if (!MODULR_STACK_QUEUE[ext.context]) {
-                            MODULR_STACK_QUEUE[ext.context] = [];
-                        }
-
-                        MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
-
                     }
 
                 } else {
@@ -714,18 +714,41 @@ var Modulr = (function(window, app){
                             // if already defined exports, don't load script!
                             if (isExportsDefined(info.exports)) {
                                 define();
+                            } else if (LOADED_SHIM_QUEUE[info.exports]) {
+                                LOADED_SHIM_QUEUE[info.exports].push(function(){
+                                    define();
+                                });
                             } else {
+                                // create queue for same shim dependencies
+                                LOADED_SHIM_QUEUE[info.exports] = [];
 
                                 loadScript(src, id, function(){
                                     if (!isExportsDefined(info.exports)) {
                                         throwError("shim export not found for: '"+id+"'");
                                     } else {
                                         define();
+                                        loadShimStackQueue(info.exports);
                                     }
                                 });
 
                             }
 
+                        }
+
+                    };
+
+                    // load the instance stack that has the same queue
+                    var loadShimStackQueue = function(exports) {
+
+                        var queue = LOADED_SHIM_QUEUE[exports] || [];
+
+                        while (queue.length > 0) {
+                            var exec_queue = queue.shift();
+                            exec_queue();
+                        }
+
+                        if (LOADED_SHIM_QUEUE[exports]) {
+                            delete LOADED_SHIM_QUEUE[exports];
                         }
 
                     };
