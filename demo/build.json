@@ -1,0 +1,13 @@
+{
+    "demo/js/aggregate/basic.js": ["demo/js/basic/**/*.js"],
+
+    "demo/js/aggregate/globals.js": [
+        "demo/js/package/globals/**/*.js"
+    ],
+    "demo/js/aggregate/plugins.js": [
+        "demo/js/package/plugins/**/*.js"
+    ],
+    "demo/js/aggregate/site.js": [
+        "demo/js/package/site/**/*.js"
+    ]
+}
