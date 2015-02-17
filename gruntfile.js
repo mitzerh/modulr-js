@@ -1,6 +1,7 @@
 module.exports = function(grunt) {
 
-    var conf = grunt.file.readJSON('package.json');
+    var conf = grunt.file.readJSON('package.json'),
+        demo = grunt.option("demo") || false;
 
     // comment banner
     var comment = [
@@ -49,13 +50,24 @@ module.exports = function(grunt) {
 
             },
 
-            sample: {
+            demo: {
 
                 src: 'js/modulr.js',
-                dest: 'sample/js/modulr.js'
+                dest: 'demo/js/modulr.js'
 
             }
             
+        },
+
+        concat: {
+
+            demo: {
+                options: {
+                    separator: ';'
+                },
+                files: grunt.file.readJSON('demo/build.json')
+            }
+
         },
 
         jshint: {
@@ -100,9 +112,28 @@ module.exports = function(grunt) {
     };
 
     // load npm's
-    require("matchdep").filterDev("grunt-*").forEach(grunt.loadNpmTasks);
+    require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
-    grunt.registerTask('default', ['clean:dest', 'uglify:includes', 'jshint', 'copy:dist', 'copy:sample', 'uglify:dist', 'clean:temp']);
+    var tasks;
+
+    if (demo) {
+        tasks = [
+            'concat:demo'
+        ];
+    } else {
+        tasks = [
+            'clean:dest',
+            'uglify:includes',
+            'jshint',
+            'copy:dist',
+            'copy:demo',
+            'concat:demo',
+            'uglify:dist',
+            'clean:temp'
+        ];
+    }
+ 
+    grunt.registerTask('default', tasks);
 
     grunt.initConfig(config);
 
