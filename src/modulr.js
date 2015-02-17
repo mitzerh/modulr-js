@@ -39,10 +39,11 @@ var Modulr = (function(window, app){
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
+                log("attempt to instantiate the same context: " + CONTEXT);
                 return false;
-                //throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
             }
 
+            // create context object
             MODULR_STACK[CONTEXT] = {
                 instance: this,
                 stack: {}
