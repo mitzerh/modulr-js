@@ -106,7 +106,7 @@ Modulr.define("site:helper", [
 
     Helper.status("site:display module.");
 
-    var num = 49523461232;
+    var num = Math.floor(Math.random() * 9999999999) + 999999;
     Helper.status("num: " + num + " | comma: " + comma(num));
 
 });;Modulr.define("site:modules/embed", [

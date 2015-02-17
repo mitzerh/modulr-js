@@ -34,7 +34,6 @@ var Modulr = (function(window, app){
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
             readyRegExp = /^(complete|loaded)$/;
 
-
         var Modulr = function(CONFIG) {
 
             CONFIG = CONFIG || {};
@@ -97,11 +96,7 @@ var Modulr = (function(window, app){
                     if (context && url) {
                         if (!scripts[context]) { scripts[context] = []; }
 
-                        scripts[context].push({
-                            id: id,
-                            url: url
-                        });
-
+                        scripts[context].push({ id:id, url:url });
                     }
 
                 }
@@ -112,11 +107,8 @@ var Modulr = (function(window, app){
              * define
              */
             Proto.define = function(id, deps, factory) {
-
                 // if invalid id
-                if (!isValidId(id)) {
-                    throwError("invalid id: '" + id + "'.");
-                }
+                if (!isValidId(id)) { throwError("invalid id: '" + id + "'."); }
 
                 // id and factory only
                 if (arguments.length === 2 && !isArray(deps)) {
@@ -130,7 +122,6 @@ var Modulr = (function(window, app){
 
                 // extended module definition
                 if (ext) {
-
                     if (MODULR_STACK[ext.context]) {
                         var instance = MODULR_STACK[ext.context].instance;
                         instance.define(ext.id, deps, factory);
@@ -142,9 +133,7 @@ var Modulr = (function(window, app){
 
                         MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
                     }
-
                 } else {
-
                     // only define if not yet defined
                     if (!STACK[id]) {
 
@@ -156,24 +145,18 @@ var Modulr = (function(window, app){
                             deps: deps, // dependencies
                             factory: factory
                         };
-
                     }
-
                 }
-
             };
 
             /**
              * execute a factory function
              */
             Proto.require = function(deps, callback) {
-
+                // if deps is string, it's called from a factory
                 if (typeof deps === "string") {
-
                     return getDefinedModule(deps);
-
                 } else if (isArray(deps)) {
-
                     var getDeps = function() {
                         // get dependencies
                         MODULE.get(null, deps, function(args){
@@ -182,26 +165,21 @@ var Modulr = (function(window, app){
                     };
 
                     var trigger = function() {
-
                         // initialize the first time
                         if (!INSTANCE_INIT) {
-                            
                             INSTANCE_INIT = true;
 
                             initializeInstance(function(){
                                 getDeps();
                             });
-
                         } else {
                             getDeps();
                         }
-
                     };
 
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
-                        
                         if (PAGE_READY || DOM_READY) {
                             trigger();
                         } else {
@@ -209,28 +187,21 @@ var Modulr = (function(window, app){
                                 trigger();
                             });
                         }
-
                     }
-
                 }
-
             };
 
             /**
              * Instantiate a unique Modulr
              */
             Proto.config = function(config) {
-
                 if (!config.context && !config.instance) {
-
                     if (INSTANCE_INIT) {
                         throwError("cannot re-configure Modulr");
                     } else {
                         CONFIG = config;
                     }
-
                 } else {
-
                     var instance = new Modulr(config);
                     
                     delete instance.config; // remote instantiation access
@@ -238,9 +209,7 @@ var Modulr = (function(window, app){
                     delete instance.getInstance; // remove call from instances
 
                     return instance;
-
                 }
-
             };
 
             /**
@@ -261,7 +230,6 @@ var Modulr = (function(window, app){
                 if (!module) {
                     callback(null);
                 } else {
-
                     if (module.executed) {
                         callback(MODULE.getModuleFactory(module));
                     } else {
@@ -269,54 +237,41 @@ var Modulr = (function(window, app){
                             callback(factory);
                         });
                     }
-
                 }
-
             };
 
             /**
              * get stack from require
              */
             function getDefinedModule(id) {
-
                 id = processDepsPath(id);
 
                 var stack = null,
                     type = "module",
                     ext = isExtendedInstance(id);
-
+                // if extended instance call
                 if (ext) {
-
                     if (ext.type === "module") {
                         stack = MODULR_STACK[ext.context].stack[ext.id];
                     } else if (ext.type === "instance") {
                         stack = MODULR_STACK[ext.context].instance;
                         type = "instance";
                     }
-
                 } else {
-
                     stack = STACK[id];
-
                 }
 
                 if (type === "module") {
-
                     if (stack && !stack.executed) {
                         throwError("module not yet executed: '"+id+"'");
                     }
-
                     stack = (stack) ? (typeof stack.factory !== "undefined") ? stack.factory : stack.exports : null;
-
                 }
 
                 return stack;
-
             }
 
-
             function initializeInstance(callback) {
-
                 // base domain
                 CONFIG.baseDomain = CONFIG.baseDomain || getDomain();
                 // baseUrl - base instance path
@@ -324,231 +279,179 @@ var Modulr = (function(window, app){
 
                 var isReady = function() {
                     INSTANCE_READY = true;
-
                     // load queue
                     loadInstanceQueue();
-
                     callback();
                 };
 
                 // load shim
                 loadShim(function(){
-
                     // load other modulr packages
                     loadPackages(function(){
                         isReady();
                     });
-                    
                 });
-                
             }
 
             // load other included instances
             function loadInstanceQueue() {
-
                 if (MODULR_STACK_QUEUE[CONTEXT]) {
-
                     var instance = MODULR_STACK[CONTEXT].instance;
 
                     for (var i = 0; i < MODULR_STACK_QUEUE[CONTEXT].length; i++) {
                         var item = MODULR_STACK_QUEUE[CONTEXT][i];
                         instance.define(item.ext.id, item.deps, item.factory);
                     }
-
                 }
-
             }
 
             // process config paths
             function processDepsPath(deps) {
-
                 if (CONFIG.paths) {
-
                     for (var i in CONFIG.paths) {
                         deps = deps.replace(i, CONFIG.paths[i]);
                     }
-
                 }
 
                 // replace double slash
                 deps = deps.replace(/\/\//g, "/");
-
                 return deps;
-
             }
 
             // module functions
             var MODULE = (function(){
 
                 var App = function() {
+                    var self = this;
 
-                };
+                    self.get = function(moduleId, deps, callback) {
+                        var next = true,
+                            args = [],
+                            arr;
 
-                
-                App.prototype.get = function(moduleId, deps, callback) {
-                    var self = this,
-                        next = true,
-                        args = [],
-                        arr;
-
-                    if (deps) {
-                        arr = cloneArr(deps);
-                    } else if (moduleId && STACK[moduleId]) {
-                        arr = cloneArr(STACK[moduleId].deps);
-                    }
-
-                    var getDeps = function() {
-
-                        if (arr.length === 0) {
-
-                            callback(args);
-
-                        } else {
-
-                            var id = processDepsPath(arr.shift()),
-                                module = getStack(id),
-                                ext = isExtendedInstance(id);
-
-                            if (ext) {
-
-                                if (ext.type === "module") {
-
-                                    // extended modules are existing contexts
-                                    getExtendedModule(id, function(extFactory){
-                                        args.push((typeof extFactory !== "undefined") ? extFactory : null);
-                                        getDeps();
-                                    });
-
-                                } else if (ext.type === "instance") {
-
-                                    args.push(getExtendedInstance(ext.context));
-                                    getDeps();
-
-                                }
-
-                            } else if (id === "require") {
-                                args.push(Proto.require);
-                                getDeps();
-                            } else if (id === "define") {
-                                args.push(Proto.define);
-                                getDeps();
-                            } else if (id === "exports") {
-                                args.push(STACK[moduleId].exports);
-                                getDeps();
-                            } else if (module) {
-
-                                if (module.executed) {
-                                    args.push(self.getModuleFactory(module));
-                                    getDeps();
-                                } else {
-                                    self.execModule(null, null, id, function(factory){
-                                        args.push(factory);
-                                        getDeps();
-                                    });
-                                }
-                                
-                            } else {
-
-                                // try to load external script
-                                var src = self.getModulePath(id);
-                                
-                                loadScript(src, id, function(){
-
-                                    self.execModule("load", src, id, function(factory){
-                                        args.push(factory);
-                                        getDeps();
-                                    });
-
-
-                                });
-
-                            }
-
+                        if (deps) {
+                            arr = cloneArr(deps);
+                        } else if (moduleId && STACK[moduleId]) {
+                            arr = cloneArr(STACK[moduleId].deps);
                         }
 
+                        var getDeps = function() {
+                            if (arr.length === 0) {
+                                callback(args);
+                            } else {
+                                var id = processDepsPath(arr.shift()),
+                                    module = getStack(id),
+                                    ext = isExtendedInstance(id);
+
+                                if (ext) {
+                                    if (ext.type === "module") {
+                                        // extended modules are existing contexts
+                                        getExtendedModule(id, function(extFactory){
+                                            args.push((typeof extFactory !== "undefined") ? extFactory : null);
+                                            getDeps();
+                                        });
+                                    } else if (ext.type === "instance") {
+                                        args.push(getExtendedInstance(ext.context));
+                                        getDeps();
+                                    }
+                                } else if (id === "require") {
+                                    args.push(Proto.require);
+                                    getDeps();
+                                } else if (id === "define") {
+                                    args.push(Proto.define);
+                                    getDeps();
+                                } else if (id === "exports") {
+                                    args.push(STACK[moduleId].exports);
+                                    getDeps();
+                                } else if (module) {
+                                    if (module.executed) {
+                                        args.push(self.getModuleFactory(module));
+                                        getDeps();
+                                    } else {
+                                        self.execModule(null, null, id, function(factory){
+                                            args.push(factory);
+                                            getDeps();
+                                        });
+                                    }
+                                } else {
+                                    // try to load external script
+                                    var src = self.getModulePath(id);
+                                    
+                                    loadScript(src, id, function(){
+                                        self.execModule("load", src, id, function(factory){
+                                            args.push(factory);
+                                            getDeps();
+                                        });
+                                    });
+                                }
+                            }
+                        };
+
+                        getDeps();
                     };
 
-                    getDeps();
+                    self.execModule = function(type, src, id, callback) {
+                        var module = getStack(id);
 
-                };
+                        if (module) {
+                            // if not yet executed
+                            if (!module.executed) {
+                                // create queue
+                                if (!self._execQueue) { self._execQueue = {}; }
+                                if (!self._execQueue[id]) { self._execQueue[id] = []; }
 
-                App.prototype.execModule = function(type, src, id, callback) {
-                    var self = this,
-                        module = getStack(id);
+                                // if still executing, queue
+                                if (!module.executing) {
+                                    module.executing = true;
 
-                    if (module) {
+                                    // push to queue
+                                    self._execQueue[id].push(callback);
 
-                        // if not yet executed
-                        if (!module.executed) {
-
-                            // create queue
-                            if (!self._execQueue) { self._execQueue = {}; }
-                            if (!self._execQueue[id]) { self._execQueue[id] = []; }
-
-                            // if still executing, queue
-                            if (!module.executing) {
-                                module.executing = true;
-
-                                // push to queue
-                                self._execQueue[id].push(callback);
-
-                                self.get(id, module.deps, function(args){
-                                    module.factory = getFactory(module.factory, args);
-                                    module.executed = true;
-                                    module.executing = false;
-                                    self.runCallbackQueue(id, self.getModuleFactory(module));
-                                });
-
-                            } else { // if already executing, wait and put to stack
-
-                                self._execQueue[id].push(callback);
-
+                                    self.get(id, module.deps, function(args){
+                                        module.factory = getFactory(module.factory, args);
+                                        module.executed = true;
+                                        module.executing = false;
+                                        self.runCallbackQueue(id, self.getModuleFactory(module));
+                                    });
+                                } else { // if already executing, wait and put to stack
+                                    self._execQueue[id].push(callback);
+                                }
+                            } else {
+                                // if already executed return factory
+                                callback(self.getModuleFactory(module));
                             }
 
                         } else {
+                            log("loading external source: " + src);
 
-                            // if already executed return factory
-                            callback(self.getModuleFactory(module));
-
+                            callback({
+                                id: id,
+                                src: src,
+                                type: "external-script"
+                            });
                         }
+                    };
 
-                        
-                    } else {
-                        
-                        log("loading external source: " + src);
+                    self.runCallbackQueue = function(id, factory) {
+                        var queue = self._execQueue[id] || [];
 
-                        callback({
-                            id: id,
-                            src: src,
-                            type: "external-script"
-                        });
+                        while (queue.length > 0) {
+                            var fn = queue.shift();
+                            fn(factory);
+                        }
+                    };
 
-                    }
+                    self.getModuleFactory = function(module){
+                        return (module.factory !== null) ? module.factory : module.exports;
+                    };
 
-                };
+                    self.getModulePath = function(id) {
+                        // base url - base instance path
+                        var base = getContextBasePath(),
+                            url = setConfigPath(base,id) + ".js";
+                        return url;
+                    };
 
-                App.prototype.runCallbackQueue = function(id, factory) {
-                    var self = this,
-                        queue = self._execQueue[id] || [];
-
-                    while (queue.length > 0) {
-                        var fn = queue.shift();
-                        fn(factory);
-                    }
-
-                };
-
-                App.prototype.getModuleFactory = function(module){
-                    return (module.factory !== null) ? module.factory : module.exports;
-                };
-
-                App.prototype.getModulePath = function(id) {
-
-                    // base url - base instance path
-                    var base = getContextBasePath(),
-                        url = setConfigPath(base,id) + ".js";
-
-                    return url;
                 };
 
                 return (new App());
@@ -578,7 +481,6 @@ var Modulr = (function(window, app){
                     if (arr.length === 0) {
                         callback();
                     } else {
-
                         var obj = arr.shift(),
                             path = obj.path,
                             src = MODULE.getModulePath(obj.path);
@@ -591,7 +493,6 @@ var Modulr = (function(window, app){
                 };
 
                 getDeps();
-
             }
 
             function getExtendedModule(id, callback) {
@@ -600,50 +501,36 @@ var Modulr = (function(window, app){
                     moduleId = sp[1] || false;
 
                 if (context && moduleId && MODULR_STACK[context]) {
-
                     var instance = MODULR_STACK[context].instance;
 
                     // if module already defined
                     if (MODULR_STACK[context].stack[moduleId]) {
-
                         instance.execModule(moduleId, function(factory){
                             callback(factory);
                         });
-
                     } else {
-
                         // attempt to load module
                         instance.require([moduleId], function(){
                             instance.execModule(moduleId, function(factory){
                                 callback(factory);
                             });
                         });
-                        
-
                     }
-                    
                 } else {
-
                     log(["Not initialized >> CONTEXT: ", context, " | module: ", moduleId].join(""));
-
                     callback(null);
-
                 }
-                
             }
 
             function getExtendedInstance(context) {
-
                 if (MODULR_STACK[context]) {
                     return MODULR_STACK[context].instance;
                 } else {
                     throwError("Error getting instance: " + context);
                 }
-
             }
 
             function isExtendedInstance(id) {
-
                 var found = (id.indexOf(":") > -1) ? true : false,
                     sp = id.split(":"),
                     context = sp[0] || false,
@@ -651,15 +538,12 @@ var Modulr = (function(window, app){
                     ret = false;
 
                 if (found) {
-
                     // check if instance
                     if (context === "getInstance" && moduleId) {
-
                         ret = {
                             type: "instance",
                             context: moduleId
                         };
-
                     } else if (context && moduleId) {
                         ret = {
                             type: "module",
@@ -667,21 +551,16 @@ var Modulr = (function(window, app){
                             id: moduleId
                         };
                     }
-
                 }
 
                 return ret;
-
             }
 
             function loadShim(callback) {
-
+                // if no shim
                 if (!CONFIG.shim) {
-
                     callback();
-
                 } else {
-
                     var arr = [];
 
                     for (var id in CONFIG.shim) {
@@ -692,11 +571,9 @@ var Modulr = (function(window, app){
                     }
 
                     var getShim = function() {
-
                         if (arr.length === 0) {
                             callback();
                         } else {
-
                             var obj = arr.shift(),
                                 id = obj.id,
                                 info = obj.info,
@@ -729,16 +606,12 @@ var Modulr = (function(window, app){
                                         loadShimStackQueue(info.exports);
                                     }
                                 });
-
                             }
-
                         }
-
                     };
 
                     // load the instance stack that has the same queue
                     var loadShimStackQueue = function(exports) {
-
                         var queue = LOADED_SHIM_QUEUE[exports] || [];
 
                         while (queue.length > 0) {
@@ -749,37 +622,26 @@ var Modulr = (function(window, app){
                         if (LOADED_SHIM_QUEUE[exports]) {
                             delete LOADED_SHIM_QUEUE[exports];
                         }
-
                     };
 
                     getShim();
-
                 }
 
             }
 
             // load other included instances
             function loadPackages(callback) {
-
                 if (!CONFIG.packages) {
-                    
                     callback();
-
                 } else {
-
                     var arr = [];
 
                     for (var uid in CONFIG.packages) {
-                        arr.push({
-                            uid: uid,
-                            src: CONFIG.packages[uid]
-                        });
-
+                        arr.push({ uid:uid, src:CONFIG.packages[uid] });
                     }
 
                     // load the instance stack that has the same queue
                     var loadInstanceStackQueue = function(srcId) {
-
                         var queue = LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
 
                         while (queue.length > 0) {
@@ -788,27 +650,20 @@ var Modulr = (function(window, app){
                         }
 
                         delete LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
-
                     };
                     
                     var getInstance = function() {
-
                         if (arr.length === 0) {
                             callback();
                         } else {
-
                             var obj = arr.shift(),
                                 uid = obj.uid,
                                 src = obj.src;
 
                             if (MODULR_STACK[uid]) {
-
                                 getInstance();
-
                             } else {
-
                                 if (!LOADED_INSTANCE_INCLUDES[src]) {
-
                                     LOADED_INSTANCE_INCLUDES[src] = uid;
 
                                     loadScript(src, uid, function(){
@@ -817,29 +672,20 @@ var Modulr = (function(window, app){
                                             loadInstanceStackQueue(src);
                                         }
                                     }, "instance");
-
                                 } else {
-
                                     if (!LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src]) { LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src] = []; }
 
                                     LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src].push(function(){
                                         getInstance();
                                     });
-
                                 }
-                             
                             }
-
                         }
-
                     };
 
                     getInstance();
-
                 }
-
             }
-
 
             function getShimSrc(src) {
                 var ret = src;
@@ -858,12 +704,10 @@ var Modulr = (function(window, app){
              * Credit to partial implementation: RequireJS
              */
             function loadScript(src, id, callback, specType) {
-
                 var loaded = false,
                     script = document.createElement("script");
 
                 var onLoad = function(evt) {
-                    
                     //Using currentTarget instead of target for Firefox 2.0's sake. Not
                     //all old browsers will be supported, but this one was easy enough
                     //to support and still makes sense.
@@ -878,9 +722,7 @@ var Modulr = (function(window, app){
                         }
 
                         delete LOADED_SCRIPTS_QUEUE[scriptId];
-
                         removeScriptListener();
-
                     }
 
                 };
@@ -895,7 +737,6 @@ var Modulr = (function(window, app){
                 };
 
                 if (id) {
-
                     var idAttrName = "data-modulr-module";
 
                     if (specType) {
@@ -903,8 +744,8 @@ var Modulr = (function(window, app){
                     }
                     
                     script.setAttribute(idAttrName, id);
-                    
                 }
+
                 script.setAttribute("data-modulr-context", CONTEXT);
 
                 var scriptId = [CONTEXT || "", id || "", src].join(":");
@@ -938,18 +779,13 @@ var Modulr = (function(window, app){
                     !isOpera) {
                 
                     script.attachEvent("onreadystatechange", onLoad);
-                    
                 } else {
-
                     script.addEventListener("load", onLoad, false);
                     script.addEventListener("error", onError, false);
-
                 }
 
                 script.src = src;
-
                 document.getElementsByTagName("head")[0].appendChild(script);
-
             }
 
         }; // Modulr
@@ -963,6 +799,7 @@ var Modulr = (function(window, app){
          */
         function getFactory(factory, deps) {
             var ret = null;
+
             if (typeof factory === "function") {
                 ret = factory.apply(factory, deps);
             } else {
@@ -975,17 +812,14 @@ var Modulr = (function(window, app){
          * check if shim exports is defined
          */
         function isExportsDefined(exports) {
-
             var ex = exports.split("."),
                 tmp = window[ex.shift()],
                 ret = false;
 
             if (typeof tmp !== "undefined") {
-
                 ret = true;
 
                 if (ex.length > 1) {
-
                     while (ex.length > 0) {
                         tmp = tmp[ex.shift()];
                         if (typeof tmp === "undefined") {
@@ -993,13 +827,10 @@ var Modulr = (function(window, app){
                             break;
                         }
                     }
-
                 }
-            
             }
 
             return ret;
-
         }
 
         /**
