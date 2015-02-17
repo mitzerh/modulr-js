@@ -13,6 +13,7 @@ var Modulr = (function(window, app){
         var MODULR_STACK = {},
             MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
+            LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             LOADED_SHIM_QUEUE = {},
@@ -56,7 +57,6 @@ var Modulr = (function(window, app){
 
             // version
             Proto.version = "${version}";
-
 
             /**
              * get current instance's config
@@ -124,16 +124,16 @@ var Modulr = (function(window, app){
                 // extended module definition
                 if (ext) {
 
-                    // queue up if context has not been instantiated yet
-                    if (!MODULR_STACK_QUEUE[ext.context]) {
-                        MODULR_STACK_QUEUE[ext.context] = [];
-                    }
-
-                    MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
-
                     if (MODULR_STACK[ext.context]) {
                         var instance = MODULR_STACK[ext.context].instance;
                         instance.define(ext.id, deps, factory);
+                    } else {
+                        // queue up if context has not been instantiated yet
+                        if (!MODULR_STACK_QUEUE[ext.context]) {
+                            MODULR_STACK_QUEUE[ext.context] = [];
+                        }
+
+                        MODULR_STACK_QUEUE[ext.context].push({ ext:ext, deps:deps, factory:factory });
                     }
 
                 } else {
@@ -606,15 +606,11 @@ var Modulr = (function(window, app){
                     } else {
 
                         // attempt to load module
-                        // todo: resolve race condition with extended modules
-                        // temp solution is an extended module timeout
-                        setTimeout(function(){
-                            instance.require([moduleId], function(){
-                                instance.execModule(moduleId, function(factory){
-                                    callback(factory);
-                                });
+                        instance.require([moduleId], function(){
+                            instance.execModule(moduleId, function(factory){
+                                callback(factory);
                             });
-                        }, 5);
+                        });
                         
 
                     }
@@ -868,7 +864,14 @@ var Modulr = (function(window, app){
                         (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
                         
                         loaded = true;
-                        callback(id);
+                        // execute queue
+                        while (LOADED_SCRIPTS_QUEUE[scriptId].length > 0) {
+                            var fn = LOADED_SCRIPTS_QUEUE[scriptId].shift();
+                            fn();
+                        }
+
+                        delete LOADED_SCRIPTS_QUEUE[scriptId];
+
                         removeScriptListener();
 
                     }
@@ -898,9 +901,19 @@ var Modulr = (function(window, app){
                 script.setAttribute("data-modulr-context", CONTEXT);
 
                 var scriptId = [CONTEXT || "", id || "", src].join(":");
+                
                 // load once
-                if (LOADED_SCRIPTS[scriptId]) { return false; }
+                if (LOADED_SCRIPTS[scriptId]) {
+                    LOADED_SCRIPTS_QUEUE[scriptId].push(function(){
+                        callback(id);
+                    });
+                    return false;
+                }
+
                 LOADED_SCRIPTS[scriptId] = true;
+                LOADED_SCRIPTS_QUEUE[scriptId] = [function(){
+                    callback(id);
+                }];
                 
                 script.type = "text/javascript";
                 script.charset = "utf-8";
