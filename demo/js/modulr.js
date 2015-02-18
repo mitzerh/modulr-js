@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.7 | 2015-02-16
+* modulr-js v0.4.9 | 2015-02-18
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -25,10 +25,14 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             LOADED_SHIM_QUEUE = {},
             DOM_READY = false,
-            PAGE_READY = false;
+            READY_QUEUE = [];
 
         DomReady(function(){
             DOM_READY = true;
+            while (READY_QUEUE.length > 0) {
+                var fn = READY_QUEUE.shift();
+                fn();
+            }
         });
 
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
@@ -46,10 +50,11 @@ var Modulr = (function(window, app){
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
+                log("attempt to instantiate the same context: " + CONTEXT);
                 return false;
-                //throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
             }
 
+            // create context object
             MODULR_STACK[CONTEXT] = {
                 instance: this,
                 stack: {}
@@ -62,7 +67,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.7";
+            Proto.version = "0.4.9";
 
             /**
              * get current instance's config
@@ -88,15 +93,14 @@ var Modulr = (function(window, app){
 
                 for (var item in LOADED_SCRIPTS) {
 
-                    var sp = item.split(":"),
+                    var sp = item.split("||"),
                         context = sp[0],
-                        id = sp[1] || "",
-                        url = sp[2] || "";
+                        url = sp[1] || "";
 
                     if (context && url) {
                         if (!scripts[context]) { scripts[context] = []; }
 
-                        scripts[context].push({ id:id, url:url });
+                        scripts[context].push(url);
                     }
 
                 }
@@ -180,12 +184,10 @@ var Modulr = (function(window, app){
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
-                        if (PAGE_READY || DOM_READY) {
+                        if (DOM_READY) {
                             trigger();
                         } else {
-                            DomReady(function(){
-                                trigger();
-                            });
+                            READY_QUEUE.push(trigger);
                         }
                     }
                 }
@@ -216,7 +218,7 @@ var Modulr = (function(window, app){
              * Page ready option
              */
             Proto.ready = function() {
-                PAGE_READY = true;
+                log("Modulr.ready has been deprecated. Please discontinue using.");
             };
 
             /**
@@ -239,6 +241,13 @@ var Modulr = (function(window, app){
                     }
                 }
             };
+
+            /**
+             * load the module definitions waiting for
+             * this instance to be configured
+             */
+            loadInstanceQueue();
+
 
             /**
              * get stack from require
@@ -279,8 +288,6 @@ var Modulr = (function(window, app){
 
                 var isReady = function() {
                     INSTANCE_READY = true;
-                    // load queue
-                    loadInstanceQueue();
                     callback();
                 };
 
@@ -298,8 +305,8 @@ var Modulr = (function(window, app){
                 if (MODULR_STACK_QUEUE[CONTEXT]) {
                     var instance = MODULR_STACK[CONTEXT].instance;
 
-                    for (var i = 0; i < MODULR_STACK_QUEUE[CONTEXT].length; i++) {
-                        var item = MODULR_STACK_QUEUE[CONTEXT][i];
+                    while (MODULR_STACK_QUEUE[CONTEXT].length > 0) {
+                        var item = MODULR_STACK_QUEUE[CONTEXT].shift();
                         instance.define(item.ext.id, item.deps, item.factory);
                     }
                 }
@@ -373,6 +380,22 @@ var Modulr = (function(window, app){
                                             getDeps();
                                         });
                                     }
+                                } else if (isShimModuleId(id)) {
+
+                                    var shimInfo = CONFIG.shim[id];
+
+                                    if (isExportsDefined(shimInfo.exports)) {
+                                        args.push(getShimExport(shimInfo.exports));
+
+                                    } else {
+                                        LOADED_SHIM_QUEUE[shimInfo.exports].push(function(){
+                                            args.push(getShimExport(shimInfo.exports));
+                                            getDeps();
+                                        });
+                                    }
+
+                                    
+                                    
                                 } else {
                                     // try to load external script
                                     var src = self.getModulePath(id);
@@ -582,7 +605,7 @@ var Modulr = (function(window, app){
 
                             var define = function() {
                                 Proto.define(id, deps, function(){
-                                    return window[info.exports.split(".")[0]];
+                                    return getShimExport(info.exports);
                                 });
                                 getShim();
                             };
@@ -687,6 +710,7 @@ var Modulr = (function(window, app){
                 }
             }
 
+            // shim source
             function getShimSrc(src) {
                 var ret = src;
 
@@ -699,13 +723,24 @@ var Modulr = (function(window, app){
                 return ret;
             }
 
+            // is a shim id
+            function isShimModuleId(id) {
+                return (CONFIG.shim[id]) ? true : false;
+            }
+
+            // shim export
+            function getShimExport(scope) {
+                 return window[scope.split(".")[0]];
+            }
+
             /**
              * loadScript
              * Credit to partial implementation: RequireJS
              */
             function loadScript(src, id, callback, specType) {
                 var loaded = false,
-                    script = document.createElement("script");
+                    script = document.createElement("script"),
+                    scriptId = [CONTEXT || "", src].join("||");
 
                 var onLoad = function(evt) {
                     //Using currentTarget instead of target for Firefox 2.0's sake. Not
@@ -748,8 +783,6 @@ var Modulr = (function(window, app){
 
                 script.setAttribute("data-modulr-context", CONTEXT);
 
-                var scriptId = [CONTEXT || "", id || "", src].join(":");
-                
                 // load once
                 if (LOADED_SCRIPTS[scriptId]) {
                     LOADED_SCRIPTS_QUEUE[scriptId].push(function(){
