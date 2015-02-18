@@ -82,7 +82,7 @@ var Modulr = (function(window, app){
 
                 for (var item in LOADED_SCRIPTS) {
 
-                    var sp = item.split(":"),
+                    var sp = item.split("||"),
                         context = sp[0],
                         id = sp[1] || "",
                         url = sp[2] || "";
@@ -742,7 +742,7 @@ var Modulr = (function(window, app){
 
                 script.setAttribute("data-modulr-context", CONTEXT);
 
-                var scriptId = [CONTEXT || "", id || "", src].join(":");
+                var scriptId = [CONTEXT || "", id || "", src].join("||");
                 
                 // load once
                 if (LOADED_SCRIPTS[scriptId]) {
