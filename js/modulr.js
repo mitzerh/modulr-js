@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.4.7 | 2015-02-16
+* modulr-js v0.4.8 | 2015-02-18
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -46,10 +46,11 @@ var Modulr = (function(window, app){
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
+                log("attempt to instantiate the same context: " + CONTEXT);
                 return false;
-                //throwError("cannot instantiate multiple contexts: '"+CONTEXT+"'");
             }
 
+            // create context object
             MODULR_STACK[CONTEXT] = {
                 instance: this,
                 stack: {}
@@ -62,7 +63,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.4.7";
+            Proto.version = "0.4.8";
 
             /**
              * get current instance's config
@@ -88,7 +89,7 @@ var Modulr = (function(window, app){
 
                 for (var item in LOADED_SCRIPTS) {
 
-                    var sp = item.split(":"),
+                    var sp = item.split("||"),
                         context = sp[0],
                         id = sp[1] || "",
                         url = sp[2] || "";
@@ -748,7 +749,7 @@ var Modulr = (function(window, app){
 
                 script.setAttribute("data-modulr-context", CONTEXT);
 
-                var scriptId = [CONTEXT || "", id || "", src].join(":");
+                var scriptId = [CONTEXT || "", id || "", src].join("||");
                 
                 // load once
                 if (LOADED_SCRIPTS[scriptId]) {
