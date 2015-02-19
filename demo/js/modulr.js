@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.1 | 2015-02-19
+* modulr-js v0.5.2 | 2015-02-19
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -67,7 +67,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.1";
+            Proto.version = "0.5.2";
 
             /**
              * get current instance's config
@@ -378,15 +378,11 @@ var Modulr = (function(window, app){
                                 } else if (isShimModuleId(id)) { // shim module definition
                                     var shimInfo = CONFIG.shim[id];
 
-                                    if (isExportsDefined(shimInfo.exports)) {
-                                        args.push(getShimExport(shimInfo.exports));
+                                    self.loadShim(id, shimInfo, function(factory){
+                                        args.push(factory);
                                         getDeps();
-                                    } else {
-                                        self.loadShim(id, shimInfo, function(){
-                                            args.push(getShimExport(shimInfo.exports));
-                                            getDeps();
-                                        });
-                                    }
+                                    });
+
                                 } else { // might be an external script..
                                     // try to load external script
                                     var src = self.getModulePath(id);
@@ -405,15 +401,24 @@ var Modulr = (function(window, app){
                     };
 
                     self.loadShim = function(id, info, callback) {
-                        var src = getShimSrc(info.src);
+                        var src = getShimSrc(info.src),
+                            module = getStack(id);
 
-                        loadScript(src, id, function(){
-                            if (!isExportsDefined(info.exports)) {
-                                throwError("shim export not found for: '"+id+"'");
-                            } else {
-                                callback();
-                            }
-                        });
+                        if (isExportsDefined(info.exports)) {
+                            module.executed = true;
+                            module.factory = getShimExport(info.exports);
+                            callback(module.factory);
+                        } else {
+                            loadScript(src, id, function(){
+                                if (!isExportsDefined(info.exports)) {
+                                    throwError("shim export not found for: '"+id+"'");
+                                } else {
+                                    self.execModule("shim", null, id, function(factory){
+                                        callback(factory);
+                                    });
+                                }
+                            });
+                        }
                     };
 
                     self.execModule = function(type, src, id, callback) {
