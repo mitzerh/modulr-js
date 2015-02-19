@@ -16,7 +16,6 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
-            LOADED_SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
 
@@ -235,9 +234,9 @@ var Modulr = (function(window, app){
             loadInstanceQueue();
 
             /**
-             * load shim
+             * set shim definitions
              */
-            loadShim();
+            setShim();
 
 
             /**
@@ -338,14 +337,14 @@ var Modulr = (function(window, app){
                                     module = getStack(id),
                                     ext = isExtendedInstance(id);
 
-                                if (ext) {
+                                if (ext) { // if extended calls (calls to other packages/instances)
                                     if (ext.type === "module") {
                                         // extended modules are existing contexts
                                         getExtendedModule(id, function(extFactory){
                                             args.push((typeof extFactory !== "undefined") ? extFactory : null);
                                             getDeps();
                                         });
-                                    } else if (ext.type === "instance") {
+                                    } else if (ext.type === "instance") { // if calling for the instance
                                         args.push(getExtendedInstance(ext.context));
                                         getDeps();
                                     }
@@ -358,7 +357,7 @@ var Modulr = (function(window, app){
                                 } else if (id === "exports") {
                                     args.push(STACK[moduleId].exports);
                                     getDeps();
-                                } else if (module) {
+                                } else if (module  && !isShimModuleId(id)) { // module, but not a shim-defined module
                                     if (module.executed) {
                                         args.push(self.getModuleFactory(module));
                                         getDeps();
@@ -368,20 +367,15 @@ var Modulr = (function(window, app){
                                             getDeps();
                                         });
                                     }
-                                } else if (isShimModuleId(id)) {
-
+                                } else if (isShimModuleId(id)) { // shim module definition
                                     var shimInfo = CONFIG.shim[id];
 
-                                    if (isExportsDefined(shimInfo.exports)) {
-                                        args.push(getShimExport(shimInfo.exports));
-                                    } else {
-                                        LOADED_SHIM_QUEUE[shimInfo.exports].push(function(){
-                                            args.push(getShimExport(shimInfo.exports));
-                                            getDeps();
-                                        });
-                                    }
+                                    self.loadShim(id, shimInfo, function(factory){
+                                        args.push(factory);
+                                        getDeps();
+                                    });
 
-                                } else {
+                                } else { // might be an external script..
                                     // try to load external script
                                     var src = self.getModulePath(id);
                                     
@@ -396,6 +390,27 @@ var Modulr = (function(window, app){
                         };
 
                         getDeps();
+                    };
+
+                    self.loadShim = function(id, info, callback) {
+                        var src = setPathSrc(info.src),
+                            module = getStack(id);
+
+                        if (isExportsDefined(info.exports)) {
+                            module.executed = true;
+                            module.factory = getShimExport(info.exports);
+                            callback(module.factory);
+                        } else {
+                            loadScript(src, id, function(){
+                                if (!isExportsDefined(info.exports)) {
+                                    throwError("shim export not found for: '"+id+"'");
+                                } else {
+                                    self.execModule("shim", null, id, function(factory){
+                                        callback(factory);
+                                    });
+                                }
+                            });
+                        }
                     };
 
                     self.execModule = function(type, src, id, callback) {
@@ -564,74 +579,31 @@ var Modulr = (function(window, app){
                 return ret;
             }
 
-            function loadShim() {
+            function setShim() {
+                if (!CONFIG.shim) { return false; }
+                var arr = [];
 
-                if (CONFIG.shim) {
-                    var arr = [];
-
-                    for (var id in CONFIG.shim) {
-                        arr.push({
-                            id: id,
-                            info: CONFIG.shim[id]
-                        });
-                    }
-
-                    var getShim = function() {
-                        
-                        if (arr.length > 0) {
-                            var obj = arr.shift(),
-                                id = obj.id,
-                                info = obj.info,
-                                src = getShimSrc(info.src),
-                                deps = info.deps || [];
-
-                            var define = function() {
-                                Proto.define(id, deps, function(){
-                                    return getShimExport(info.exports);
-                                });
-                                getShim();
-                            };
-
-                            // if already defined exports, don't load script!
-                            if (isExportsDefined(info.exports)) {
-                                define();
-                            } else if (LOADED_SHIM_QUEUE[info.exports]) {
-                                LOADED_SHIM_QUEUE[info.exports].push(function(){
-                                    define();
-                                });
-                            } else {
-                                // create queue for same shim dependencies
-                                LOADED_SHIM_QUEUE[info.exports] = [];
-
-                                loadScript(src, id, function(){
-                                    if (!isExportsDefined(info.exports)) {
-                                        throwError("shim export not found for: '"+id+"'");
-                                    } else {
-                                        define();
-                                        loadShimStackQueue(info.exports);
-                                    }
-                                });
-                            }
-                        }
-                    };
-
-                    // load the instance stack that has the same queue
-                    var loadShimStackQueue = function(exports) {
-                        var queue = LOADED_SHIM_QUEUE[exports] || [];
-
-                        while (queue.length > 0) {
-                            var exec_queue = queue.shift();
-                            exec_queue();
-                        }
-
-                        if (LOADED_SHIM_QUEUE[exports]) {
-                            delete LOADED_SHIM_QUEUE[exports];
-                        }
-                    };
-
-                    getShim();
+                for (var sid in CONFIG.shim) {
+                    arr.push({
+                        id: sid,
+                        info: CONFIG.shim[sid]
+                    });
                 }
 
+                var setDefinition = function(obj) {
+                    var id = obj.id,
+                        info = obj.info,
+                        src = setPathSrc(info.src),
+                        deps = info.deps || [];
+
+                    Proto.define(id, deps, function(){
+                        return getShimExport(info.exports);
+                    });
+                };
+
+                while (arr.length > 0) {
+                    setDefinition(arr.shift());
+                }
             }
 
             // load other included instances
@@ -663,7 +635,7 @@ var Modulr = (function(window, app){
                         } else {
                             var obj = arr.shift(),
                                 uid = obj.uid,
-                                src = obj.src;
+                                src = setPathSrc(obj.src);
 
                             if (MODULR_STACK[uid]) {
                                 getInstance();
@@ -692,8 +664,8 @@ var Modulr = (function(window, app){
                 }
             }
 
-            // shim source
-            function getShimSrc(src) {
+            // set source with domain
+            function setPathSrc(src) {
                 var ret = src;
 
                 if (src.indexOf("//") === 0 || src.indexOf("http") === 0) {
@@ -707,7 +679,7 @@ var Modulr = (function(window, app){
 
             // is a shim id
             function isShimModuleId(id) {
-                return (CONFIG.shim[id]) ? true : false;
+                return (CONFIG.shim && CONFIG.shim[id]) ? true : false;
             }
 
             // shim export
