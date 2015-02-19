@@ -208,13 +208,6 @@ var Modulr = (function(window, app){
             };
 
             /**
-             * Page ready option
-             */
-            Proto.ready = function() {
-                log("Modulr.ready has been deprecated. Please discontinue using.");
-            };
-
-            /**
              * external module execution
              */
             Proto.execModule = function(id, callback) {
@@ -240,6 +233,11 @@ var Modulr = (function(window, app){
              * this instance to be configured
              */
             loadInstanceQueue();
+
+            /**
+             * load shim
+             */
+            loadShim();
 
 
             /**
@@ -284,12 +282,9 @@ var Modulr = (function(window, app){
                     callback();
                 };
 
-                // load shim
-                loadShim(function(){
-                    // load other modulr packages
-                    loadPackages(function(){
-                        isReady();
-                    });
+                // load other modulr packages
+                loadPackages(function(){
+                    isReady();
                 });
             }
 
@@ -379,7 +374,6 @@ var Modulr = (function(window, app){
 
                                     if (isExportsDefined(shimInfo.exports)) {
                                         args.push(getShimExport(shimInfo.exports));
-
                                     } else {
                                         LOADED_SHIM_QUEUE[shimInfo.exports].push(function(){
                                             args.push(getShimExport(shimInfo.exports));
@@ -387,8 +381,6 @@ var Modulr = (function(window, app){
                                         });
                                     }
 
-                                    
-                                    
                                 } else {
                                     // try to load external script
                                     var src = self.getModulePath(id);
@@ -572,11 +564,9 @@ var Modulr = (function(window, app){
                 return ret;
             }
 
-            function loadShim(callback) {
-                // if no shim
-                if (!CONFIG.shim) {
-                    callback();
-                } else {
+            function loadShim() {
+
+                if (CONFIG.shim) {
                     var arr = [];
 
                     for (var id in CONFIG.shim) {
@@ -587,9 +577,8 @@ var Modulr = (function(window, app){
                     }
 
                     var getShim = function() {
-                        if (arr.length === 0) {
-                            callback();
-                        } else {
+                        
+                        if (arr.length > 0) {
                             var obj = arr.shift(),
                                 id = obj.id,
                                 info = obj.info,
