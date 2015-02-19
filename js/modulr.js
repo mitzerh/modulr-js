@@ -400,7 +400,7 @@ var Modulr = (function(window, app){
                     };
 
                     self.loadShim = function(id, info, callback) {
-                        var src = getShimSrc(info.src),
+                        var src = setPathSrc(info.src),
                             module = getStack(id);
 
                         if (isExportsDefined(info.exports)) {
@@ -600,7 +600,7 @@ var Modulr = (function(window, app){
                 var setDefinition = function(obj) {
                     var id = obj.id,
                         info = obj.info,
-                        src = getShimSrc(info.src),
+                        src = setPathSrc(info.src),
                         deps = info.deps || [];
 
                     Proto.define(id, deps, function(){
@@ -642,7 +642,7 @@ var Modulr = (function(window, app){
                         } else {
                             var obj = arr.shift(),
                                 uid = obj.uid,
-                                src = obj.src;
+                                src = setPathSrc(obj.src);
 
                             if (MODULR_STACK[uid]) {
                                 getInstance();
@@ -671,8 +671,8 @@ var Modulr = (function(window, app){
                 }
             }
 
-            // shim source
-            function getShimSrc(src) {
+            // set source with domain
+            function setPathSrc(src) {
                 var ret = src;
 
                 if (src.indexOf("//") === 0 || src.indexOf("http") === 0) {
