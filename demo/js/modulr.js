@@ -756,7 +756,7 @@ var Modulr = (function(window, app){
 
             // is a shim id
             function isShimModuleId(id) {
-                return (CONFIG.shim[id]) ? true : false;
+                return (CONFIG.shim && CONFIG.shim[id]) ? true : false;
             }
 
             // shim export
