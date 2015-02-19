@@ -23,7 +23,6 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
-            LOADED_SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
 
@@ -613,75 +612,6 @@ var Modulr = (function(window, app){
                     setDefinition(arr.shift());
                 }
             }
-
-            // function loadShim() {
-
-            //     if (!CONFIG.shim) { return false; }
-            //     var arr = [];
-
-            //     for (var id in CONFIG.shim) {
-            //         arr.push({
-            //             id: id,
-            //             info: CONFIG.shim[id]
-            //         });
-            //     }
-
-            //     var getShim = function() {
-                    
-            //         if (arr.length > 0) {
-            //             var obj = arr.shift(),
-            //                 id = obj.id,
-            //                 info = obj.info,
-            //                 src = getShimSrc(info.src),
-            //                 deps = info.deps || [];
-
-            //             var define = function() {
-            //                 Proto.define(id, deps, function(){
-            //                     return getShimExport(info.exports);
-            //                 });
-            //                 getShim();
-            //             };
-
-            //             // if already defined exports, don't load script!
-            //             if (isExportsDefined(info.exports)) {
-            //                 define();
-            //             } else if (LOADED_SHIM_QUEUE[info.exports]) {
-            //                 LOADED_SHIM_QUEUE[info.exports].push(function(){
-            //                     define();
-            //                 });
-            //             } else {
-            //                 // create queue for same shim dependencies
-            //                 LOADED_SHIM_QUEUE[info.exports] = [];
-
-            //                 loadScript(src, id, function(){
-            //                     if (!isExportsDefined(info.exports)) {
-            //                         throwError("shim export not found for: '"+id+"'");
-            //                     } else {
-            //                         define();
-            //                         loadShimStackQueue(info.exports);
-            //                     }
-            //                 });
-            //             }
-            //         }
-            //     };
-
-            //     // load the instance stack that has the same queue
-            //     var loadShimStackQueue = function(exports) {
-            //         var queue = LOADED_SHIM_QUEUE[exports] || [];
-
-            //         while (queue.length > 0) {
-            //             var exec_queue = queue.shift();
-            //             exec_queue();
-            //         }
-
-            //         if (LOADED_SHIM_QUEUE[exports]) {
-            //             delete LOADED_SHIM_QUEUE[exports];
-            //         }
-            //     };
-
-            //     getShim();
-
-            // }
 
             // load other included instances
             function loadPackages(callback) {
