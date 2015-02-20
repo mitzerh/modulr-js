@@ -319,8 +319,8 @@ var Modulr = (function(window, app){
                     }
                 }
 
-                // replace double slash
-                deps = deps.replace(/\/\//g, "/");
+                // replace double slash, remove prefix slash
+                deps = deps.replace(/\/\//g, "/").replace(/^\//, '');
                 return deps;
             }
 

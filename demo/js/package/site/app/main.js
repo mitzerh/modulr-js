@@ -5,9 +5,9 @@ Modulr.define("site:main", [
 ], function(require, $, Helper){
     
     require([
-        "modules/json",
+        "@mods/json",
         "modules/display",
-        "modules/embed"
+        "@mods/embed"
     ], function(json){
 
         Helper.status("site:main loaded.");
