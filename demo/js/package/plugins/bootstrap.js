@@ -9,7 +9,11 @@
 
         baseDomain: domain,
 
-        baseUrl: path + "/js/package/plugins/app/modules",
+        baseUrl: path + "/js/package/plugins/app",
+
+        paths: {
+            "@mods": "/modules"
+        },
         
         shim: {
             "jquery": {
