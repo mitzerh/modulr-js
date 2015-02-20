@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.3 | 2015-02-20
+* modulr-js v0.5.4 | 2015-02-20
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -42,8 +42,6 @@ var Modulr = (function(window, app){
             CONFIG = CONFIG || {};
             // default context
             CONFIG.context = CONFIG.instance || CONFIG.context || "_";
-            // wait for DOM or PAGE ready (true default)
-            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
 
@@ -71,7 +69,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.3";
+            Proto.version = "0.5.4";
 
             /**
              * get current instance's config
@@ -184,15 +182,11 @@ var Modulr = (function(window, app){
                             getDeps();
                         }
                     };
-
-                    if (!CONFIG.wait) {
+                
+                    if (DOM_READY) {
                         trigger();
                     } else {
-                        if (DOM_READY) {
-                            trigger();
-                        } else {
-                            READY_QUEUE.push(trigger);
-                        }
+                        READY_QUEUE.push(trigger);
                     }
                 }
             };
