@@ -1,4 +1,4 @@
-Modulr.define("plugins:numberComma", [], function(){
+Modulr.define("plugins:modules/numberComma", [], function(){
 
     var App = function(val) {
         if (isNaN(val)) { return val; }
@@ -78,7 +78,11 @@ Modulr.define("plugins:numberComma", [], function(){
 
         baseDomain: domain,
 
-        baseUrl: path + "/js/package/plugins/app/modules",
+        baseUrl: path + "/js/package/plugins/app",
+
+        paths: {
+            "@mods": "/modules"
+        },
         
         shim: {
             "jquery": {
