@@ -1,11 +1,11 @@
 Modulr.define("site:modules/display", [
     "require",
     "helper",
-    "plugins:numberComma"
+    "plugins:@mods/numberComma"
 ], function(require){
 
     var Helper = require("helper"),
-        comma = require("plugins:numberComma");
+        comma = require("plugins:@mods/numberComma");
 
     Helper.status("site:display module.");
 
