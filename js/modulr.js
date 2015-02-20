@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.2 | 2015-02-19
+* modulr-js v0.5.3 | 2015-02-20
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -47,6 +47,11 @@ var Modulr = (function(window, app){
 
             var CONTEXT = CONFIG.context;
 
+            // validate context
+            if (!isValidContextId(CONTEXT)) {
+                throwError("invalid context: '"+CONTEXT+"'");
+            }
+
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
                 log("attempt to instantiate the same context: " + CONTEXT);
@@ -66,7 +71,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.2";
+            Proto.version = "0.5.3";
 
             /**
              * get current instance's config
@@ -833,6 +838,14 @@ var Modulr = (function(window, app){
         function isValidId(id) {
             var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
             return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports") ? true : false;
+        }
+
+        /**
+         * validate context uid
+         */
+        function isValidContextId(id) {
+            var invalid = /[^A-Za-z0-9_\-\.]/g.test(id);
+            return (typeof id === "string" && !invalid) ? true : false;
         }
 
         /**
