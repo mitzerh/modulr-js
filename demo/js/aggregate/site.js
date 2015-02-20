@@ -14,9 +14,9 @@ Modulr.define("site:helper", [
 ], function(require, $, Helper){
     
     require([
-        "modules/json",
+        "@mods/json",
         "modules/display",
-        "modules/embed"
+        "@mods/embed"
     ], function(json){
 
         Helper.status("site:main loaded.");
@@ -156,6 +156,10 @@ Modulr.define("site:helper", [
         packages: {
             "plugins": path + "/js/package/plugins/bootstrap.js",
             "globals": path + "/js/package/globals/bootstrap.js"
+        },
+
+        paths: {
+            "@mods": "modules"
         },
         
         shim: {

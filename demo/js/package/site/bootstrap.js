@@ -15,6 +15,10 @@
             "plugins": path + "/js/package/plugins/bootstrap.js",
             "globals": path + "/js/package/globals/bootstrap.js"
         },
+
+        paths: {
+            "@mods": "modules"
+        },
         
         shim: {
             "jquery": {
