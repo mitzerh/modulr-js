@@ -409,24 +409,24 @@ var Modulr = (function(window, app){
                     };
 
                     self.loadShim = function(id, info, callback) {
-                        var src = setPathSrc(info.src),
-                            module = getStack(id);
+                        var src = setPathSrc(info.src);
+                        info.src = src;
 
                         if (isExportsDefined(info.exports)) {
-                            module.executed = true;
-                            module.factory = getShimExport(info.exports);
-                            callback(module.factory);
+                            callback(getShimExport(info.exports));
                         } else if (SHIM_QUEUE[id]) {
-                            SHIM_QUEUE[id].push(callback);
+                            SHIM_QUEUE[id].push(function(){
+                                callback(getShimExport(info.exports));
+                            });
                         } else {
-                            SHIM_QUEUE[id] = [callback];
+                            SHIM_QUEUE[id] = [function(){
+                                callback(getShimExport(info.exports));
+                            }];
                             loadScript(src, id, function(){
                                 if (!isExportsDefined(info.exports)) {
                                     throwError("shim export not found for: '"+id+"'");
                                 } else {
-                                    self.execModule("shim", null, id, function(){
-                                        loadShimQueue(id);
-                                    });
+                                    loadShimQueue(id);
                                 }
                             });
                         }
