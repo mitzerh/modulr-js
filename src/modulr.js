@@ -311,8 +311,8 @@ var Modulr = (function(window, app){
                 return deps;
             }
 
-            // run shim stack queue
-            function loadShimQueue(id) {
+            // process shim
+            function processShimQueue(id) {
                 if (SHIM_QUEUE[id]) {
                     while (SHIM_QUEUE[id].length > 0) {
                         var fn = SHIM_QUEUE[id].shift();
@@ -402,24 +402,31 @@ var Modulr = (function(window, app){
                     };
 
                     self.loadShim = function(id, info, callback) {
-                        var src = setPathSrc(info.src);
-                        info.src = src;
+                        var src = setPathSrc(info.src),
+                            module = getStack(id);
 
                         if (isExportsDefined(info.exports)) {
-                            callback(getShimExport(info.exports));
+                            module.executed = true;
+                            module.factory = getShimExport(info.exports);
+                            callback(module.factory);
                         } else if (SHIM_QUEUE[id]) {
                             SHIM_QUEUE[id].push(function(){
-                                callback(getShimExport(info.exports));
+                                self.execModule("shim", null, id, function(factory){
+                                    callback(factory);
+                                });
                             });
                         } else {
                             SHIM_QUEUE[id] = [function(){
-                                callback(getShimExport(info.exports));
+                                self.execModule("shim", null, id, function(factory){
+                                    callback(factory);
+                                });
                             }];
+
                             loadScript(src, id, function(){
                                 if (!isExportsDefined(info.exports)) {
                                     throwError("shim export not found for: '"+id+"'");
                                 } else {
-                                    loadShimQueue(id);
+                                    processShimQueue(id);
                                 }
                             });
                         }
