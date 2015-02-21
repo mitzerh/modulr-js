@@ -14,9 +14,9 @@ Modulr.define("site:helper", [
 ], function(require, $, Helper){
     
     require([
-        "modules/json",
+        "@mods/json",
         "modules/display",
-        "modules/embed"
+        "@mods/embed"
     ], function(json){
 
         Helper.status("site:main loaded.");
@@ -98,11 +98,11 @@ Modulr.define("site:helper", [
 });;Modulr.define("site:modules/display", [
     "require",
     "helper",
-    "plugins:numberComma"
+    "plugins:@mods/numberComma"
 ], function(require){
 
     var Helper = require("helper"),
-        comma = require("plugins:numberComma");
+        comma = require("plugins:@mods/numberComma");
 
     Helper.status("site:display module.");
 
@@ -156,6 +156,10 @@ Modulr.define("site:helper", [
         packages: {
             "plugins": path + "/js/package/plugins/bootstrap.js",
             "globals": path + "/js/package/globals/bootstrap.js"
+        },
+
+        paths: {
+            "@mods": "modules"
         },
         
         shim: {

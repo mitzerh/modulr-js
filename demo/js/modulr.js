@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.2 | 2015-02-19
+* modulr-js v0.5.4 | 2015-02-20
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -42,10 +42,13 @@ var Modulr = (function(window, app){
             CONFIG = CONFIG || {};
             // default context
             CONFIG.context = CONFIG.instance || CONFIG.context || "_";
-            // wait for DOM or PAGE ready (true default)
-            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
+
+            // validate context
+            if (!isValidContextId(CONTEXT)) {
+                throwError("invalid context: '"+CONTEXT+"'");
+            }
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
@@ -66,7 +69,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.2";
+            Proto.version = "0.5.4";
 
             /**
              * get current instance's config
@@ -179,15 +182,11 @@ var Modulr = (function(window, app){
                             getDeps();
                         }
                     };
-
-                    if (!CONFIG.wait) {
+                
+                    if (DOM_READY) {
                         trigger();
                     } else {
-                        if (DOM_READY) {
-                            trigger();
-                        } else {
-                            READY_QUEUE.push(trigger);
-                        }
+                        READY_QUEUE.push(trigger);
                     }
                 }
             };
@@ -314,8 +313,8 @@ var Modulr = (function(window, app){
                     }
                 }
 
-                // replace double slash
-                deps = deps.replace(/\/\//g, "/");
+                // replace double slash, remove prefix slash
+                deps = deps.replace(/\/\//g, "/").replace(/^\//, '');
                 return deps;
             }
 
@@ -833,6 +832,14 @@ var Modulr = (function(window, app){
         function isValidId(id) {
             var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
             return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports") ? true : false;
+        }
+
+        /**
+         * validate context uid
+         */
+        function isValidContextId(id) {
+            var invalid = /[^A-Za-z0-9_\-\.]/g.test(id);
+            return (typeof id === "string" && !invalid) ? true : false;
         }
 
         /**

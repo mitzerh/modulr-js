@@ -1,4 +1,4 @@
-Modulr.define("plugins:numberComma", [], function(){
+Modulr.define("plugins:modules/numberComma", [], function(){
 
     var App = function(val) {
         if (isNaN(val)) { return val; }
