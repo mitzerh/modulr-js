@@ -18,4 +18,7 @@ npm install http-server -g
 # go to demo folder and run
 cd demo
 http-server -p 1337
+
+# view on browser
+http://localhost:1337/
 ```
