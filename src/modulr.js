@@ -198,7 +198,6 @@ var Modulr = (function(window, app){
                     var instance = new Modulr(config);
                     
                     delete instance.config; // remote instantiation access
-                    delete instance.ready; // no need for ready state
                     delete instance.getInstance; // remove call from instances
 
                     return instance;
