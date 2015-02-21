@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.5 | 2015-02-20
+* modulr-js v0.5.6 | 2015-02-21
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -23,6 +23,7 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
+            SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
 
@@ -69,7 +70,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.5";
+            Proto.version = "0.5.6";
 
             /**
              * get current instance's config
@@ -317,6 +318,16 @@ var Modulr = (function(window, app){
                 return deps;
             }
 
+            // run shim stack queue
+            function loadShimQueue(id) {
+                if (SHIM_QUEUE[id]) {
+                    while (SHIM_QUEUE[id].length > 0) {
+                        var fn = SHIM_QUEUE[id].shift();
+                        fn();
+                    }
+                }
+            }
+
             // module functions
             var MODULE = (function(){
 
@@ -405,13 +416,16 @@ var Modulr = (function(window, app){
                             module.executed = true;
                             module.factory = getShimExport(info.exports);
                             callback(module.factory);
+                        } else if (SHIM_QUEUE[id]) {
+                            SHIM_QUEUE[id].push(callback);
                         } else {
+                            SHIM_QUEUE[id] = [callback];
                             loadScript(src, id, function(){
                                 if (!isExportsDefined(info.exports)) {
                                     throwError("shim export not found for: '"+id+"'");
                                 } else {
-                                    self.execModule("shim", null, id, function(factory){
-                                        callback(factory);
+                                    self.execModule("shim", null, id, function(){
+                                        loadShimQueue(id);
                                     });
                                 }
                             });

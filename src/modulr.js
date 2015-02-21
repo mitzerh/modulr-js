@@ -16,6 +16,7 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
+            SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
 
@@ -310,6 +311,16 @@ var Modulr = (function(window, app){
                 return deps;
             }
 
+            // run shim stack queue
+            function loadShimQueue(id) {
+                if (SHIM_QUEUE[id]) {
+                    while (SHIM_QUEUE[id].length > 0) {
+                        var fn = SHIM_QUEUE[id].shift();
+                        fn();
+                    }
+                }
+            }
+
             // module functions
             var MODULE = (function(){
 
@@ -398,13 +409,16 @@ var Modulr = (function(window, app){
                             module.executed = true;
                             module.factory = getShimExport(info.exports);
                             callback(module.factory);
+                        } else if (SHIM_QUEUE[id]) {
+                            SHIM_QUEUE[id].push(callback);
                         } else {
+                            SHIM_QUEUE[id] = [callback];
                             loadScript(src, id, function(){
                                 if (!isExportsDefined(info.exports)) {
                                     throwError("shim export not found for: '"+id+"'");
                                 } else {
-                                    self.execModule("shim", null, id, function(factory){
-                                        callback(factory);
+                                    self.execModule("shim", null, id, function(){
+                                        loadShimQueue(id);
                                     });
                                 }
                             });
