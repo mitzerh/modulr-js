@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.4 | 2015-02-20
+* modulr-js v0.5.5 | 2015-02-20
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -69,7 +69,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.4";
+            Proto.version = "0.5.5";
 
             /**
              * get current instance's config
