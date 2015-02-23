@@ -36,6 +36,8 @@ var Modulr = (function(window, app){
             CONFIG = CONFIG || {};
             // default context
             CONFIG.context = CONFIG.instance || CONFIG.context || "_";
+            // wait for DOM or PAGE ready (true default)
+            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
 
@@ -177,11 +179,15 @@ var Modulr = (function(window, app){
                         }
                     };
                 
+                    if (!CONFIG.wait) {
+                        trigger();
+                    } else {
                     if (DOM_READY) {
                         trigger();
                     } else {
                         READY_QUEUE.push(trigger);
                     }
+                }
                 }
             };
 
