@@ -21,7 +21,8 @@
         },
         
         shim: {
-            "jquery": {
+            // shim the same jquery file, even with a different id, will not load another jquery instance
+            "thejquery": {
                 src: "//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js",
                 exports: "jQuery"
             },

@@ -1,6 +1,6 @@
 Modulr.define("site:models/json.test", [
     "require",
-    "jquery",
+    "thejquery",
     "helper"
 ], function(require, $){
 
