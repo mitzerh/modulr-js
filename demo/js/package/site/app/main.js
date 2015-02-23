@@ -1,6 +1,6 @@
 Modulr.define("site:main", [
     "require",
-    "jquery",
+    "thejquery",
     "helper"
 ], function(require, $, Helper){
     

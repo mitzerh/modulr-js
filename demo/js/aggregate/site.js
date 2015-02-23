@@ -9,7 +9,7 @@ Modulr.define("site:helper", [
 
 });;Modulr.define("site:main", [
     "require",
-    "jquery",
+    "thejquery",
     "helper"
 ], function(require, $, Helper){
     
@@ -29,7 +29,7 @@ Modulr.define("site:helper", [
 
 });;Modulr.define("site:models/json.test", [
     "require",
-    "jquery",
+    "thejquery",
     "helper"
 ], function(require, $){
 
@@ -163,7 +163,8 @@ Modulr.define("site:helper", [
         },
         
         shim: {
-            "jquery": {
+            // shim the same jquery file, even with a different id, will not load another jquery instance
+            "thejquery": {
                 src: "//ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js",
                 exports: "jQuery"
             },
