@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.5.8 | 2015-02-23
+* modulr-js v0.6.0 | 2015-09-02
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -23,6 +23,7 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
+            INSTANCE_LIST = {},
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
@@ -72,7 +73,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.5.8";
+            Proto.version = "0.6.0";
 
             /**
              * get current instance's config
@@ -237,6 +238,27 @@ var Modulr = (function(window, app){
                         });
                     }
                 }
+            };
+
+            /**
+             * load the package/instances
+             */
+            Proto.loadPackageList = function(packages) {
+                if (!isArray(packages) && typeof packages === "object") {
+                    for (var id in packages) {
+                        if (!INSTANCE_LIST[id]) {
+                            INSTANCE_LIST[id] = packages[id];
+                        } else {
+                            log("a package already exists for: " + id);
+                        }
+                    }
+                } else {
+                    throwError("cannot load package list.");
+                }
+            };
+
+            Proto.getPackageList = function() {
+                return INSTANCE_LIST;
             };
 
             /**
@@ -645,8 +667,25 @@ var Modulr = (function(window, app){
                 } else {
                     var arr = [];
 
-                    for (var uid in CONFIG.packages) {
-                        arr.push({ uid:uid, src:CONFIG.packages[uid] });
+                    // new - using package list master file
+                    if (isArray(CONFIG.packages)) {
+                        for (var i = 0; i < CONFIG.packages.length; i++) {
+                            var id = CONFIG.packages[i];
+                            if (INSTANCE_LIST[id]) {
+                                arr.push({ uid:id, src:INSTANCE_LIST[id] });
+                            } else {
+                                throwError("cannot find package named: " + id);
+                            }
+                        }
+                    } else { // legacy
+                        for (var uid in CONFIG.packages) {
+                            // add to instance list
+                            if (!INSTANCE_LIST[uid]) {
+                                log("please add this instance to the master package file: " + uid);
+                                INSTANCE_LIST[uid] = CONFIG.packages[uid];
+                            }
+                            arr.push({ uid:uid, src:CONFIG.packages[uid] });
+                        }
                     }
 
                     // load the instance stack that has the same queue
