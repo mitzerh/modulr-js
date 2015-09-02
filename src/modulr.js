@@ -277,7 +277,7 @@ var Modulr = (function(window, app){
 
             function initializeInstance(callback) {
                 // base domain
-                CONFIG.baseDomain = CONFIG.baseDomain || getDomain();
+                CONFIG.baseDomain = addProtocol(CONFIG.baseDomain) || getDomain();
                 // baseUrl - base instance path
                 CONFIG.baseUrl = CONFIG.baseUrl || getRelativePath();
 
@@ -415,14 +415,14 @@ var Modulr = (function(window, app){
                             module.executed = true;
                             module.factory = getShimExport(info.exports);
                             callback(module.factory);
-                        } else if (SHIM_QUEUE[id]) {
-                            SHIM_QUEUE[id].push(function(){
+                        } else if (SHIM_QUEUE[src]) {
+                            SHIM_QUEUE[src].push(function(){
                                 self.execModule("shim", null, id, function(factory){
                                     callback(factory);
                                 });
                             });
                         } else {
-                            SHIM_QUEUE[id] = [function(){
+                            SHIM_QUEUE[src] = [function(){
                                 self.execModule("shim", null, id, function(factory){
                                     callback(factory);
                                 });
@@ -432,7 +432,7 @@ var Modulr = (function(window, app){
                                 if (!isExportsDefined(info.exports)) {
                                     throwError("shim export not found for: '"+id+"'");
                                 } else {
-                                    processShimQueue(id);
+                                    processShimQueue(src);
                                 }
                             });
                         }
@@ -693,10 +693,12 @@ var Modulr = (function(window, app){
             function setPathSrc(src) {
                 var ret = src;
 
-                if (src.indexOf("//") === 0 || src.indexOf("http") === 0) {
-                    ret = src;
-                } else {
-                    ret = CONFIG.baseDomain + ((src.charAt(0) !== "/") ? "/" : "") + src;
+                if (src.indexOf("http") !== 0) {
+                    if (src.indexOf("//") === 0) {
+                        ret = addProtocol(src);
+                    } else {
+                        ret = CONFIG.baseDomain + ((src.charAt(0) !== "/") ? "/" : "") + src;
+                    }
                 }
 
                 return ret;
@@ -879,15 +881,30 @@ var Modulr = (function(window, app){
             return getDomain()+ path;
         }
 
+        /**
+         * get the current domain host
+         */
         function getDomain() {
             var loc = window.location;
             return loc.protocol + "//" + (loc.host || loc.hostname);
         }
 
+        /**
+         * clean up the path
+         */
         function setConfigPath(baseUrl, path) {
             baseUrl = rtrimSlash(baseUrl);
             path = trimSlash(path);
             return [baseUrl, path].join("/");
+        }
+
+        function addProtocol(domain) {
+            var ret = domain,
+                protocol = window.location.protocol;
+            if (domain.indexOf("http") !== 0) {
+                ret = protocol + ((domain.indexOf("//") !== 0) ? "//" : "") + domain;
+            }
+            return ret;
         }
 
         /**
