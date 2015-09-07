@@ -17,6 +17,7 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
+            MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
@@ -308,10 +309,14 @@ var Modulr = (function(window, app){
                     callback();
                 };
 
-                // load other modulr packages
-                loadPackages(function(){
-                    isReady();
+                // load master file
+                loadMasterFile(function(){
+                    // load other modulr packages
+                    loadPackages(function(){
+                        isReady();
+                    });
                 });
+
             }
 
             // load other included instances
@@ -650,6 +655,26 @@ var Modulr = (function(window, app){
 
                 while (arr.length > 0) {
                     setDefinition(arr.shift());
+                }
+            }
+
+            function loadMasterFile(callback) {
+                if (!CONFIG.masterFile) {
+
+                    callback();
+
+                } else {
+
+                    var src = setPathSrc(CONFIG.masterFile);
+
+                    if (MASTER_FILE && MASTER_FILE !== src) {
+                        throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                    } else {
+                        MASTER_FILE = src;
+                        loadScript(src, null, function(){
+                            callback();
+                        });
+                    }
                 }
             }
 
