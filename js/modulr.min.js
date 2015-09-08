@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.0 | 2015-09-07
+* modulr-js v0.6.0 | 2015-09-08
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
