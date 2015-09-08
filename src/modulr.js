@@ -17,6 +17,7 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
+            INSTANCE_LIST_READY = false,
             MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
@@ -239,11 +240,10 @@ var Modulr = (function(window, app){
              */
             Proto.loadPackageList = function(packages) {
                 if (!isArray(packages) && typeof packages === "object") {
+                    INSTANCE_LIST_READY = true;
                     for (var id in packages) {
                         if (!INSTANCE_LIST[id]) {
                             INSTANCE_LIST[id] = packages[id];
-                        } else {
-                            log("a package already exists for: " + id);
                         }
                     }
                 } else {
@@ -251,8 +251,11 @@ var Modulr = (function(window, app){
                 }
             };
 
-            Proto.getPackageList = function() {
-                return INSTANCE_LIST;
+            Proto.getPackageListInfo = function() {
+                return {
+                    master: MASTER_FILE,
+                    instances: INSTANCE_LIST
+                };
             };
 
             /**
@@ -659,22 +662,33 @@ var Modulr = (function(window, app){
             }
 
             function loadMasterFile(callback) {
+
                 if (!CONFIG.masterFile) {
 
                     callback();
 
                 } else {
 
-                    var src = setPathSrc(CONFIG.masterFile);
+                    if (INSTANCE_LIST_READY) {
 
-                    if (MASTER_FILE && MASTER_FILE !== src) {
-                        throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                        callback();
+
                     } else {
-                        MASTER_FILE = src;
-                        loadScript(src, null, function(){
-                            callback();
-                        });
+
+                        var src = setPathSrc(CONFIG.masterFile);
+
+                        if (MASTER_FILE && MASTER_FILE !== src) {
+                            throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                        } else {
+                            MASTER_FILE = src;
+                            loadScript(src, null, function(){
+                                callback();
+                            });
+                        }
+
                     }
+
+                    
                 }
             }
 

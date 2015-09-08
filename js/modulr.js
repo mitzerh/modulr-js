@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.0 | 2015-09-08
+* modulr-js v0.6.1 | 2015-09-08
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -24,6 +24,7 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
+            INSTANCE_LIST_READY = false,
             MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
@@ -74,7 +75,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.6.0";
+            Proto.version = "0.6.1";
 
             /**
              * get current instance's config
@@ -246,11 +247,10 @@ var Modulr = (function(window, app){
              */
             Proto.loadPackageList = function(packages) {
                 if (!isArray(packages) && typeof packages === "object") {
+                    INSTANCE_LIST_READY = true;
                     for (var id in packages) {
                         if (!INSTANCE_LIST[id]) {
                             INSTANCE_LIST[id] = packages[id];
-                        } else {
-                            log("a package already exists for: " + id);
                         }
                     }
                 } else {
@@ -258,8 +258,11 @@ var Modulr = (function(window, app){
                 }
             };
 
-            Proto.getPackageList = function() {
-                return INSTANCE_LIST;
+            Proto.getPackageListInfo = function() {
+                return {
+                    master: MASTER_FILE,
+                    instances: INSTANCE_LIST
+                };
             };
 
             /**
@@ -666,22 +669,33 @@ var Modulr = (function(window, app){
             }
 
             function loadMasterFile(callback) {
+
                 if (!CONFIG.masterFile) {
 
                     callback();
 
                 } else {
 
-                    var src = setPathSrc(CONFIG.masterFile);
+                    if (INSTANCE_LIST_READY) {
 
-                    if (MASTER_FILE && MASTER_FILE !== src) {
-                        throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                        callback();
+
                     } else {
-                        MASTER_FILE = src;
-                        loadScript(src, null, function(){
-                            callback();
-                        });
+
+                        var src = setPathSrc(CONFIG.masterFile);
+
+                        if (MASTER_FILE && MASTER_FILE !== src) {
+                            throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                        } else {
+                            MASTER_FILE = src;
+                            loadScript(src, null, function(){
+                                callback();
+                            });
+                        }
+
                     }
+
+                    
                 }
             }
 
@@ -1043,7 +1057,7 @@ var Modulr = (function(window, app){
     }(
 
         (function(){
-            var domready=function(a){function b(a){for(n=1;a=d.shift();)a()}var c,d=[],e=!1,f=document,g=f.documentElement,h=g.doScroll,i="DOMContentLoaded",j="addEventListener",k="onreadystatechange",l="readyState",m=h?/^loaded|^c/:/^loaded|c/,n=m.test(f[l]);return f[j]&&f[j](i,c=function(){f.removeEventListener(i,c,e),b()},e),h&&f.attachEvent(k,c=function(){/^c/.test(f[l])&&(f.detachEvent(k,c),b())}),ready=h?function(a){self!=top?n?a():d.push(a):function(){try{g.doScroll("left")}catch(b){return setTimeout(function(){ready(a)},50)}a()}()}:function(a){n?a():d.push(a)}}();
+            var domready=function(){function a(a){for(m=1;a=c.shift();)a()}var b,c=[],d=!1,e=document,f=e.documentElement,g=f.doScroll,h="DOMContentLoaded",i="addEventListener",j="onreadystatechange",k="readyState",l=g?/^loaded|^c/:/^loaded|c/,m=l.test(e[k]);return e[i]&&e[i](h,b=function(){e.removeEventListener(h,b,d),a()},d),g&&e.attachEvent(j,b=function(){/^c/.test(e[k])&&(e.detachEvent(j,b),a())}),ready=g?function(a){self!=top?m?a():c.push(a):function(){try{f.doScroll("left")}catch(b){return setTimeout(function(){ready(a)},50)}a()}()}:function(a){m?a():c.push(a)}}();
             return domready;
         }())
 
