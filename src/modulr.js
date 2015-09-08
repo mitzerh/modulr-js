@@ -16,6 +16,9 @@ var Modulr = (function(window, app){
             LOADED_SCRIPTS_QUEUE = {},
             LOADED_INSTANCE_INCLUDES = {},
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
+            INSTANCE_LIST = {},
+            INSTANCE_LIST_READY = false,
+            MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [];
@@ -233,6 +236,29 @@ var Modulr = (function(window, app){
             };
 
             /**
+             * load the package/instances
+             */
+            Proto.loadPackageList = function(packages) {
+                if (!isArray(packages) && typeof packages === "object") {
+                    INSTANCE_LIST_READY = true;
+                    for (var id in packages) {
+                        if (!INSTANCE_LIST[id]) {
+                            INSTANCE_LIST[id] = packages[id];
+                        }
+                    }
+                } else {
+                    throwError("cannot load package list.");
+                }
+            };
+
+            Proto.getPackageListInfo = function() {
+                return {
+                    master: MASTER_FILE,
+                    instances: INSTANCE_LIST
+                };
+            };
+
+            /**
              * load the module definitions waiting for
              * this instance to be configured
              */
@@ -286,10 +312,14 @@ var Modulr = (function(window, app){
                     callback();
                 };
 
-                // load other modulr packages
-                loadPackages(function(){
-                    isReady();
+                // load master file
+                loadMasterFile(function(){
+                    // load other modulr packages
+                    loadPackages(function(){
+                        isReady();
+                    });
                 });
+
             }
 
             // load other included instances
@@ -631,6 +661,37 @@ var Modulr = (function(window, app){
                 }
             }
 
+            function loadMasterFile(callback) {
+
+                if (!CONFIG.masterFile) {
+
+                    callback();
+
+                } else {
+
+                    if (INSTANCE_LIST_READY) {
+
+                        callback();
+
+                    } else {
+
+                        var src = setPathSrc(CONFIG.masterFile);
+
+                        if (MASTER_FILE && MASTER_FILE !== src) {
+                            throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
+                        } else {
+                            MASTER_FILE = src;
+                            loadScript(src, null, function(){
+                                callback();
+                            });
+                        }
+
+                    }
+
+                    
+                }
+            }
+
             // load other included instances
             function loadPackages(callback) {
                 if (!CONFIG.packages) {
@@ -638,8 +699,25 @@ var Modulr = (function(window, app){
                 } else {
                     var arr = [];
 
-                    for (var uid in CONFIG.packages) {
-                        arr.push({ uid:uid, src:CONFIG.packages[uid] });
+                    // new - using package list master file
+                    if (isArray(CONFIG.packages)) {
+                        for (var i = 0; i < CONFIG.packages.length; i++) {
+                            var id = CONFIG.packages[i];
+                            if (INSTANCE_LIST[id]) {
+                                arr.push({ uid:id, src:INSTANCE_LIST[id] });
+                            } else {
+                                throwError("cannot find package named: " + id);
+                            }
+                        }
+                    } else { // legacy
+                        for (var uid in CONFIG.packages) {
+                            // add to instance list
+                            if (!INSTANCE_LIST[uid]) {
+                                log("please add this instance to the master package file: " + uid);
+                                INSTANCE_LIST[uid] = CONFIG.packages[uid];
+                            }
+                            arr.push({ uid:uid, src:CONFIG.packages[uid] });
+                        }
                     }
 
                     // load the instance stack that has the same queue
