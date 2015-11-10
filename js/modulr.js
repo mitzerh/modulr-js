@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.1 | 2015-09-08
+* modulr-js v0.7.0 | 2015-11-10
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -28,14 +28,18 @@ var Modulr = (function(window, app){
             MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
-            READY_QUEUE = [];
+            READY_QUEUE = [],
+            PAGE_MODULES_READY = false,
+            PAGE_MODULES = [];
 
         DomReady(function(){
+
             DOM_READY = true;
             while (READY_QUEUE.length > 0) {
                 var fn = READY_QUEUE.shift();
                 fn();
             }
+
         });
 
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
@@ -70,12 +74,13 @@ var Modulr = (function(window, app){
 
             var STACK = MODULR_STACK[CONTEXT].stack,
                 INSTANCE_INIT = false,
+                INSTANCE_READY_QUEUE = [],
                 INSTANCE_READY = false;
 
             var Proto = this;
 
             // version
-            Proto.version = "0.6.1";
+            Proto.version = "0.7.0";
 
             /**
              * get current instance's config
@@ -185,19 +190,27 @@ var Modulr = (function(window, app){
                                 getDeps();
                             });
                         } else {
-                            getDeps();
+
+                            if (!INSTANCE_READY) {
+                                INSTANCE_READY_QUEUE.push(function(){
+                                    getDeps();
+                                });
+                            } else {
+                                getDeps();
+                            }
+
                         }
                     };
                 
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
-                    if (DOM_READY) {
-                        trigger();
-                    } else {
-                        READY_QUEUE.push(trigger);
+                        if (DOM_READY) {
+                            trigger();
+                        } else {
+                            READY_QUEUE.push(trigger);
+                        }
                     }
-                }
                 }
             };
 
@@ -216,7 +229,15 @@ var Modulr = (function(window, app){
                     
                     delete instance.config; // remote instantiation access
                     delete instance.getInstance; // remove call from instances
-
+                    
+                    if (DOM_READY) {
+                        loadPageModules(instance);
+                    } else {
+                        DomReady(function(){
+                            loadPageModules(instance);
+                        });
+                    }
+                    
                     return instance;
                 }
             };
@@ -276,6 +297,67 @@ var Modulr = (function(window, app){
              */
             setShim();
 
+            // set up page modules
+            function loadPageModules(instance) {
+
+                var config = instance.getConfig();
+
+                // set module templates only once
+                if (!PAGE_MODULES_READY) {
+                    PAGE_MODULES_READY = true;
+
+                    var attrName = "data-modulr-module",
+                        targets = document.querySelectorAll("["+attrName+"]"),
+                        items = [];
+                    
+                    for (var i = 0; i < targets.length; i++) {
+                        var dom = targets[i],
+                            val = targets[i].getAttribute(attrName);
+                            spv = val.split(":");
+
+                        if (spv.length === 2) {
+
+                            if (!PAGE_MODULES[val]) {
+                                PAGE_MODULES[val] = {
+                                    context: spv[0],
+                                    moduleId: spv[1],
+                                    executed: false,
+                                    resource: {
+                                        dom: []
+                                    }
+                                };
+                            }
+
+                            PAGE_MODULES[val].resource.dom.push(dom);
+
+                        }
+
+                    }
+
+                }
+
+                for (var id in PAGE_MODULES) {
+
+                    var info = PAGE_MODULES[id];
+
+                    if (!info.executed) {
+
+                        var context = info.context,
+                            moduleId = info.moduleId,
+                            deps = [];
+
+                        deps.push(moduleId);
+
+                        if (context === config.context) {
+                            PAGE_MODULES[id].executed = true;
+                            instance.require(deps);
+                        }
+
+                    }
+
+                }
+
+            }
 
             /**
              * get stack from require
@@ -314,8 +396,16 @@ var Modulr = (function(window, app){
                 // baseUrl - base instance path
                 CONFIG.baseUrl = CONFIG.baseUrl || getRelativePath();
 
+                var queueStack = function() {
+                    while (INSTANCE_READY_QUEUE.length > 0) {
+                        var item = INSTANCE_READY_QUEUE.shift();
+                        item();
+                    }
+                };
+
                 var isReady = function() {
                     INSTANCE_READY = true;
+                    queueStack();
                     callback();
                 };
 
@@ -408,6 +498,14 @@ var Modulr = (function(window, app){
                                     getDeps();
                                 } else if (id === "exports") {
                                     args.push(STACK[moduleId].exports);
+                                    getDeps();
+                                } else if (id === "module->resource") {
+                                    var argDep = null,
+                                        definition = [CONFIG.context, moduleId].join(":");
+                                    if (PAGE_MODULES[definition] && PAGE_MODULES[definition].executed) {
+                                        argDep = PAGE_MODULES[definition].resource;
+                                    }
+                                    args.push(argDep);
                                     getDeps();
                                 } else if (module  && !isShimModuleId(id)) { // module, but not a shim-defined module
                                     if (module.executed) {
@@ -892,7 +990,7 @@ var Modulr = (function(window, app){
         /**
          * modulr shared functions
          */
-    
+
         /**
          * get module
          */
@@ -983,6 +1081,9 @@ var Modulr = (function(window, app){
             return [baseUrl, path].join("/");
         }
 
+        /**
+         * add http/s protocol
+         */
         function addProtocol(domain) {
             var ret = domain,
                 protocol = window.location.protocol;

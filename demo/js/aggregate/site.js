@@ -117,6 +117,14 @@ Modulr.define("site:helper", [
     var Helper = require("helper");
     Helper.status("site:embed module.");
 
+});;Modulr.define("site:modules/inject", [
+    "require",
+    "helper"
+], function(require){
+
+    var Helper = require("helper");
+    Helper.status("site:inject module.");
+
 });;Modulr.define("site:modules/json", [
     "require",
     "models/json.test",
@@ -153,10 +161,12 @@ Modulr.define("site:helper", [
         
         baseUrl: path + "/js/package/site/app",
 
-        packages: {
-            "plugins": path + "/js/package/plugins/bootstrap.js",
-            "globals": path + "/js/package/globals/bootstrap.js"
-        },
+        masterFile: path + "/js/package/master.js",
+
+        packages: [
+            "plugins",
+            "globals"
+        ],
 
         paths: {
             "@mods": "modules"

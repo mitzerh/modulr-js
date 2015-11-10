@@ -11,9 +11,11 @@
 
         baseUrl: path + "/js/package/globals/app",
 
-        packages: {
-            "plugins": path + "/js/package/plugins/bootstrap.js"
-        },
+        masterFile: path + "/js/package/master.js",
+
+        packages: [
+            "plugins"
+        ],
         
         shim: {
             "jquery": {
