@@ -80,6 +80,8 @@ Modulr.define("plugins:modules/numberComma", [], function(){
 
         baseUrl: path + "/js/package/plugins/app",
 
+        masterFile: path + "/js/package/master.js",
+
         paths: {
             "@mods": "/modules"
         },

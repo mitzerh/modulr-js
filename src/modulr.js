@@ -21,14 +21,18 @@ var Modulr = (function(window, app){
             MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
-            READY_QUEUE = [];
+            READY_QUEUE = [],
+            PAGE_MODULES_READY = false,
+            PAGE_MODULES = [];
 
         DomReady(function(){
+
             DOM_READY = true;
             while (READY_QUEUE.length > 0) {
                 var fn = READY_QUEUE.shift();
                 fn();
             }
+
         });
 
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
@@ -63,6 +67,7 @@ var Modulr = (function(window, app){
 
             var STACK = MODULR_STACK[CONTEXT].stack,
                 INSTANCE_INIT = false,
+                INSTANCE_READY_QUEUE = [],
                 INSTANCE_READY = false;
 
             var Proto = this;
@@ -178,19 +183,27 @@ var Modulr = (function(window, app){
                                 getDeps();
                             });
                         } else {
-                            getDeps();
+
+                            if (!INSTANCE_READY) {
+                                INSTANCE_READY_QUEUE.push(function(){
+                                    getDeps();
+                                });
+                            } else {
+                                getDeps();
+                            }
+
                         }
                     };
-                
+
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
-                    if (DOM_READY) {
-                        trigger();
-                    } else {
-                        READY_QUEUE.push(trigger);
+                        if (DOM_READY) {
+                            trigger();
+                        } else {
+                            READY_QUEUE.push(trigger);
+                        }
                     }
-                }
                 }
             };
 
@@ -206,9 +219,17 @@ var Modulr = (function(window, app){
                     }
                 } else {
                     var instance = new Modulr(config);
-                    
+
                     delete instance.config; // remote instantiation access
                     delete instance.getInstance; // remove call from instances
+
+                    if (DOM_READY) {
+                        loadPageModules(instance);
+                    } else {
+                        DomReady(function(){
+                            loadPageModules(instance);
+                        });
+                    }
 
                     return instance;
                 }
@@ -269,6 +290,67 @@ var Modulr = (function(window, app){
              */
             setShim();
 
+            // set up page modules
+            function loadPageModules(instance) {
+
+                var config = instance.getConfig();
+
+                // set module templates only once
+                if (!PAGE_MODULES_READY) {
+                    PAGE_MODULES_READY = true;
+
+                    var attrName = "data-modulr-module",
+                        targets = document.querySelectorAll("["+attrName+"]"),
+                        items = [];
+
+                    for (var i = 0; i < targets.length; i++) {
+                        var dom = targets[i],
+                            val = targets[i].getAttribute(attrName);
+                            spv = val.split(":");
+
+                        if (spv.length === 2) {
+
+                            if (!PAGE_MODULES[val]) {
+                                PAGE_MODULES[val] = {
+                                    context: spv[0],
+                                    moduleId: spv[1],
+                                    executed: false,
+                                    resource: {
+                                        dom: []
+                                    }
+                                };
+                            }
+
+                            PAGE_MODULES[val].resource.dom.push(dom);
+
+                        }
+
+                    }
+
+                }
+
+                for (var id in PAGE_MODULES) {
+
+                    var info = PAGE_MODULES[id];
+
+                    if (!info.executed) {
+
+                        var context = info.context,
+                            moduleId = info.moduleId,
+                            deps = [];
+
+                        deps.push(moduleId);
+
+                        if (context === config.context) {
+                            PAGE_MODULES[id].executed = true;
+                            instance.require(deps);
+                        }
+
+                    }
+
+                }
+
+            }
 
             /**
              * get stack from require
@@ -307,8 +389,16 @@ var Modulr = (function(window, app){
                 // baseUrl - base instance path
                 CONFIG.baseUrl = CONFIG.baseUrl || getRelativePath();
 
+                var queueStack = function() {
+                    while (INSTANCE_READY_QUEUE.length > 0) {
+                        var item = INSTANCE_READY_QUEUE.shift();
+                        item();
+                    }
+                };
+
                 var isReady = function() {
                     INSTANCE_READY = true;
+                    queueStack();
                     callback();
                 };
 
@@ -402,6 +492,14 @@ var Modulr = (function(window, app){
                                 } else if (id === "exports") {
                                     args.push(STACK[moduleId].exports);
                                     getDeps();
+                                } else if (id === "module->resource") {
+                                    var argDep = null,
+                                        definition = [CONFIG.context, moduleId].join(":");
+                                    if (PAGE_MODULES[definition] && PAGE_MODULES[definition].executed) {
+                                        argDep = PAGE_MODULES[definition].resource;
+                                    }
+                                    args.push(argDep);
+                                    getDeps();
                                 } else if (module  && !isShimModuleId(id)) { // module, but not a shim-defined module
                                     if (module.executed) {
                                         args.push(self.getModuleFactory(module));
@@ -423,7 +521,7 @@ var Modulr = (function(window, app){
                                 } else { // might be an external script..
                                     // try to load external script
                                     var src = self.getModulePath(id);
-                                    
+
                                     loadScript(src, id, function(){
                                         self.execModule("load", src, id, function(factory){
                                             args.push(factory);
@@ -535,7 +633,7 @@ var Modulr = (function(window, app){
                 return (new App());
 
             }());
-    
+
             function getStack(id) {
                 return STACK[id] || false;
             }
@@ -562,7 +660,7 @@ var Modulr = (function(window, app){
                         var obj = arr.shift(),
                             path = obj.path,
                             src = MODULE.getModulePath(obj.path);
-                        
+
                         loadScript(src, null, function(){
                             getDeps();
                         });
@@ -688,7 +786,7 @@ var Modulr = (function(window, app){
 
                     }
 
-                    
+
                 }
             }
 
@@ -697,27 +795,35 @@ var Modulr = (function(window, app){
                 if (!CONFIG.packages) {
                     callback();
                 } else {
+
                     var arr = [];
+
+                    var setPackageObj = function(obj) {
+                        for (var uid in obj) {
+                            // add to instance list
+                            if (!INSTANCE_LIST[uid]) {
+                                log("please add this instance to the master package file: " + uid);
+                                INSTANCE_LIST[uid] = obj[uid];
+                            }
+                            arr.push({ uid:uid, src:obj[uid] });
+                        }
+                    };
 
                     // new - using package list master file
                     if (isArray(CONFIG.packages)) {
                         for (var i = 0; i < CONFIG.packages.length; i++) {
-                            var id = CONFIG.packages[i];
-                            if (INSTANCE_LIST[id]) {
-                                arr.push({ uid:id, src:INSTANCE_LIST[id] });
+                            var item = CONFIG.packages[i];
+
+                            if (typeof item === "string" && INSTANCE_LIST[item]) {
+                                arr.push({ uid:item, src:INSTANCE_LIST[item] });
+                            } else if (typeof item === "object" && !isArray(item)) {
+                                setPackageObj(item);
                             } else {
                                 throwError("cannot find package named: " + id);
                             }
                         }
                     } else { // legacy
-                        for (var uid in CONFIG.packages) {
-                            // add to instance list
-                            if (!INSTANCE_LIST[uid]) {
-                                log("please add this instance to the master package file: " + uid);
-                                INSTANCE_LIST[uid] = CONFIG.packages[uid];
-                            }
-                            arr.push({ uid:uid, src:CONFIG.packages[uid] });
-                        }
+                        setPackageObj(CONFIG.packages);
                     }
 
                     // load the instance stack that has the same queue
@@ -731,7 +837,7 @@ var Modulr = (function(window, app){
 
                         delete LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
                     };
-                    
+
                     var getInstance = function() {
                         if (arr.length === 0) {
                             callback();
@@ -807,7 +913,7 @@ var Modulr = (function(window, app){
                     //to support and still makes sense.
                     if (!loaded && evt.type === 'load' ||
                         (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
-                        
+
                         loaded = true;
                         // execute queue
                         while (LOADED_SCRIPTS_QUEUE[scriptId].length > 0) {
@@ -836,7 +942,7 @@ var Modulr = (function(window, app){
                     if (specType) {
                         idAttrName = "data-modulr-loaded-inst";
                     }
-                    
+
                     script.setAttribute(idAttrName, id);
                 }
 
@@ -854,7 +960,7 @@ var Modulr = (function(window, app){
                 LOADED_SCRIPTS_QUEUE[scriptId] = [function(){
                     callback(id);
                 }];
-                
+
                 script.type = "text/javascript";
                 script.charset = "utf-8";
                 script.async = true;
@@ -869,7 +975,7 @@ var Modulr = (function(window, app){
                     //https://github.com/jrburke/requirejs/issues/273
                     !(script.attachEvent.toString && script.attachEvent.toString().indexOf("[native code") < 0) &&
                     !isOpera) {
-                
+
                     script.attachEvent("onreadystatechange", onLoad);
                 } else {
                     script.addEventListener("load", onLoad, false);
@@ -885,7 +991,7 @@ var Modulr = (function(window, app){
         /**
          * modulr shared functions
          */
-    
+
         /**
          * get module
          */
@@ -976,6 +1082,9 @@ var Modulr = (function(window, app){
             return [baseUrl, path].join("/");
         }
 
+        /**
+         * add http/s protocol
+         */
         function addProtocol(domain) {
             var ret = domain,
                 protocol = window.location.protocol;
@@ -1046,7 +1155,7 @@ var Modulr = (function(window, app){
         }
 
         return (new Modulr());
-        
+
     }(
 
         (function(){

@@ -39,6 +39,20 @@ Modulr.define("globals:helper", [
         
     Helper.status("globals:main loaded.");
 
+});;Modulr.define("globals:modules/inject", [
+    "require",
+    "jquery",
+    "module->resource",
+    "helper"
+], function(require, $, resource){
+
+    console.log("Module Resource >>", resource);
+
+    console.log("DOM in jQuery >>", $(resource.dom));
+
+    var Helper = require("helper");
+    Helper.status("globals:inject module.");
+
 });;(function(){
 
     var path = window.location.pathname.split('/').reverse().slice(1).reverse().join('/'),
@@ -52,9 +66,11 @@ Modulr.define("globals:helper", [
 
         baseUrl: path + "/js/package/globals/app",
 
-        packages: {
-            "plugins": path + "/js/package/plugins/bootstrap.js"
-        },
+        masterFile: path + "/js/package/master.js",
+
+        packages: [
+            "plugins"
+        ],
         
         shim: {
             "jquery": {
