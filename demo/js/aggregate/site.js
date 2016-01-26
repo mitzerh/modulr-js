@@ -153,10 +153,12 @@ Modulr.define("site:helper", [
         
         baseUrl: path + "/js/package/site/app",
 
-        packages: {
-            "plugins": path + "/js/package/plugins/bootstrap.js",
-            "globals": path + "/js/package/globals/bootstrap.js"
-        },
+        masterFile: path + "/js/package/master.js",
+
+        packages: [
+            "plugins",
+            "globals"
+        ],
 
         paths: {
             "@mods": "modules"

@@ -181,7 +181,7 @@ var Modulr = (function(window, app){
                             getDeps();
                         }
                     };
-                
+
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
@@ -206,7 +206,7 @@ var Modulr = (function(window, app){
                     }
                 } else {
                     var instance = new Modulr(config);
-                    
+
                     delete instance.config; // remote instantiation access
                     delete instance.getInstance; // remove call from instances
 
@@ -423,7 +423,7 @@ var Modulr = (function(window, app){
                                 } else { // might be an external script..
                                     // try to load external script
                                     var src = self.getModulePath(id);
-                                    
+
                                     loadScript(src, id, function(){
                                         self.execModule("load", src, id, function(factory){
                                             args.push(factory);
@@ -535,7 +535,7 @@ var Modulr = (function(window, app){
                 return (new App());
 
             }());
-    
+
             function getStack(id) {
                 return STACK[id] || false;
             }
@@ -562,7 +562,7 @@ var Modulr = (function(window, app){
                         var obj = arr.shift(),
                             path = obj.path,
                             src = MODULE.getModulePath(obj.path);
-                        
+
                         loadScript(src, null, function(){
                             getDeps();
                         });
@@ -688,7 +688,7 @@ var Modulr = (function(window, app){
 
                     }
 
-                    
+
                 }
             }
 
@@ -699,25 +699,32 @@ var Modulr = (function(window, app){
                 } else {
                     var arr = [];
 
+                    var setPackageObj = function(obj) {
+                        for (var uid in obj) {
+                            // add to instance list
+                            if (!INSTANCE_LIST[uid]) {
+                                log("please add this instance to the master package file: " + uid);
+                                INSTANCE_LIST[uid] = obj[uid];
+                            }
+                            arr.push({ uid:uid, src:obj[uid] });
+                        }
+                    };
+
                     // new - using package list master file
                     if (isArray(CONFIG.packages)) {
                         for (var i = 0; i < CONFIG.packages.length; i++) {
-                            var id = CONFIG.packages[i];
-                            if (INSTANCE_LIST[id]) {
-                                arr.push({ uid:id, src:INSTANCE_LIST[id] });
+                            var item = CONFIG.packages[i];
+
+                            if (typeof item === "string" && INSTANCE_LIST[item]) {
+                                arr.push({ uid:item, src:INSTANCE_LIST[item] });
+                            } else if (typeof item === "object" && !isArray(item)) {
+                                setPackageObj(item);
                             } else {
                                 throwError("cannot find package named: " + id);
                             }
                         }
                     } else { // legacy
-                        for (var uid in CONFIG.packages) {
-                            // add to instance list
-                            if (!INSTANCE_LIST[uid]) {
-                                log("please add this instance to the master package file: " + uid);
-                                INSTANCE_LIST[uid] = CONFIG.packages[uid];
-                            }
-                            arr.push({ uid:uid, src:CONFIG.packages[uid] });
-                        }
+                        setPackageObj(CONFIG.packages);
                     }
 
                     // load the instance stack that has the same queue
@@ -731,7 +738,7 @@ var Modulr = (function(window, app){
 
                         delete LOADED_INSTANCE_INCLUDES_STACK_QUEUE[srcId];
                     };
-                    
+
                     var getInstance = function() {
                         if (arr.length === 0) {
                             callback();
@@ -807,7 +814,7 @@ var Modulr = (function(window, app){
                     //to support and still makes sense.
                     if (!loaded && evt.type === 'load' ||
                         (readyRegExp.test((evt.currentTarget || evt.srcElement).readyState))) {
-                        
+
                         loaded = true;
                         // execute queue
                         while (LOADED_SCRIPTS_QUEUE[scriptId].length > 0) {
@@ -836,7 +843,7 @@ var Modulr = (function(window, app){
                     if (specType) {
                         idAttrName = "data-modulr-loaded-inst";
                     }
-                    
+
                     script.setAttribute(idAttrName, id);
                 }
 
@@ -854,7 +861,7 @@ var Modulr = (function(window, app){
                 LOADED_SCRIPTS_QUEUE[scriptId] = [function(){
                     callback(id);
                 }];
-                
+
                 script.type = "text/javascript";
                 script.charset = "utf-8";
                 script.async = true;
@@ -869,7 +876,7 @@ var Modulr = (function(window, app){
                     //https://github.com/jrburke/requirejs/issues/273
                     !(script.attachEvent.toString && script.attachEvent.toString().indexOf("[native code") < 0) &&
                     !isOpera) {
-                
+
                     script.attachEvent("onreadystatechange", onLoad);
                 } else {
                     script.addEventListener("load", onLoad, false);
@@ -885,7 +892,7 @@ var Modulr = (function(window, app){
         /**
          * modulr shared functions
          */
-    
+
         /**
          * get module
          */
@@ -1046,7 +1053,7 @@ var Modulr = (function(window, app){
         }
 
         return (new Modulr());
-        
+
     }(
 
         (function(){
