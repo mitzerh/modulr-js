@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.2 | 2016-01-26
+* modulr-js v0.6.3 | 2016-05-06
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -30,11 +30,17 @@ var Modulr = (function(window, app){
             DOM_READY = false,
             READY_QUEUE = [];
 
-        DomReady(function(){
+        var executeReadyState = function() {
             DOM_READY = true;
             while (READY_QUEUE.length > 0) {
                 var fn = READY_QUEUE.shift();
                 fn();
+            }
+        };
+
+        DomReady(function(){
+            if (!DOM_READY) {
+                executeReadyState();
             }
         });
 
@@ -75,7 +81,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.6.2";
+            Proto.version = "0.6.3";
 
             /**
              * get current instance's config
@@ -185,19 +191,19 @@ var Modulr = (function(window, app){
                                 getDeps();
                             });
                         } else {
-                            getDeps();
-                        }
+                                    getDeps();
+                            }
                     };
 
                     if (!CONFIG.wait) {
                         trigger();
                     } else {
-                    if (DOM_READY) {
-                        trigger();
-                    } else {
-                        READY_QUEUE.push(trigger);
+                        if (DOM_READY) {
+                            trigger();
+                        } else {
+                            READY_QUEUE.push(trigger);
+                        }
                     }
-                }
                 }
             };
 
@@ -263,6 +269,13 @@ var Modulr = (function(window, app){
                     master: MASTER_FILE,
                     instances: INSTANCE_LIST
                 };
+            };
+
+            /**
+             * set ready callback for in-page execution if you don't want to use DOM_READY
+             */
+            Proto.setReady = function() {
+                executeReadyState();
             };
 
             /**
@@ -732,7 +745,7 @@ var Modulr = (function(window, app){
                         }
                     } else { // legacy
                         setPackageObj(CONFIG.packages);
-                    }
+                            }
 
                     // load the instance stack that has the same queue
                     var loadInstanceStackQueue = function(srcId) {
@@ -990,6 +1003,9 @@ var Modulr = (function(window, app){
             return [baseUrl, path].join("/");
         }
 
+        /**
+         * add http/s protocol
+         */
         function addProtocol(domain) {
             var ret = domain,
                 protocol = window.location.protocol;
