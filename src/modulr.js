@@ -25,14 +25,18 @@ var Modulr = (function(window, app){
             PAGE_MODULES_READY = false,
             PAGE_MODULES = [];
 
-        DomReady(function(){
-
+        var executeReadyState = function() {
             DOM_READY = true;
             while (READY_QUEUE.length > 0) {
                 var fn = READY_QUEUE.shift();
                 fn();
             }
+        };
 
+        DomReady(function(){
+            if (!DOM_READY) {
+                executeReadyState();
+            }
         });
 
         var isOpera = (typeof opera !== 'undefined' && opera.toString() === '[object Opera]') ? true : false,
@@ -183,16 +187,8 @@ var Modulr = (function(window, app){
                                 getDeps();
                             });
                         } else {
-
-                            if (!INSTANCE_READY) {
-                                INSTANCE_READY_QUEUE.push(function(){
                                     getDeps();
-                                });
-                            } else {
-                                getDeps();
                             }
-
-                        }
                     };
 
                     if (!CONFIG.wait) {
@@ -277,6 +273,13 @@ var Modulr = (function(window, app){
                     master: MASTER_FILE,
                     instances: INSTANCE_LIST
                 };
+            };
+
+            /**
+             * set ready callback for in-page execution if you don't want to use DOM_READY
+             */
+            Proto.setReady = function() {
+                executeReadyState();
             };
 
             /**
@@ -824,7 +827,7 @@ var Modulr = (function(window, app){
                         }
                     } else { // legacy
                         setPackageObj(CONFIG.packages);
-                    }
+                            }
 
                     // load the instance stack that has the same queue
                     var loadInstanceStackQueue = function(srcId) {
