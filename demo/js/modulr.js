@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.3 | 2016-05-06
+* modulr-js v0.6.3.1 | 2016-07-06
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -81,7 +81,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.6.3";
+            Proto.version = "0.6.3.1";
 
             /**
              * get current instance's config
@@ -740,7 +740,7 @@ var Modulr = (function(window, app){
                             } else if (typeof item === "object" && !isArray(item)) {
                                 setPackageObj(item);
                             } else {
-                                throwError("cannot find package named: " + id);
+                                throwError("cannot find package named: " + item);
                             }
                         }
                     } else { // legacy
@@ -1080,7 +1080,7 @@ var Modulr = (function(window, app){
     }(
 
         (function(){
-            var domready=function(){function a(a){for(m=1;a=c.shift();)a()}var b,c=[],d=!1,e=document,f=e.documentElement,g=f.doScroll,h="DOMContentLoaded",i="addEventListener",j="onreadystatechange",k="readyState",l=g?/^loaded|^c/:/^loaded|c/,m=l.test(e[k]);return e[i]&&e[i](h,b=function(){e.removeEventListener(h,b,d),a()},d),g&&e.attachEvent(j,b=function(){/^c/.test(e[k])&&(e.detachEvent(j,b),a())}),ready=g?function(a){self!=top?m?a():c.push(a):function(){try{f.doScroll("left")}catch(b){return setTimeout(function(){ready(a)},50)}a()}()}:function(a){m?a():c.push(a)}}();
+            var domready=function(a){function b(a){for(n=1;a=d.shift();)a()}var c,d=[],e=!1,f=document,g=f.documentElement,h=g.doScroll,i="DOMContentLoaded",j="addEventListener",k="onreadystatechange",l="readyState",m=h?/^loaded|^c/:/^loaded|c/,n=m.test(f[l]);return f[j]&&f[j](i,c=function(){f.removeEventListener(i,c,e),b()},e),h&&f.attachEvent(k,c=function(){/^c/.test(f[l])&&(f.detachEvent(k,c),b())}),ready=h?function(a){self!=top?n?a():d.push(a):function(){try{g.doScroll("left")}catch(b){return setTimeout(function(){ready(a)},50)}a()}()}:function(a){n?a():d.push(a)}}();
             return domready;
         }())
 
