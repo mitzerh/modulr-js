@@ -733,7 +733,7 @@ var Modulr = (function(window, app){
                             } else if (typeof item === "object" && !isArray(item)) {
                                 setPackageObj(item);
                             } else {
-                                throwError("cannot find package named: " + id);
+                                throwError("cannot find package named: " + item);
                             }
                         }
                     } else { // legacy
