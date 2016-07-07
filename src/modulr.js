@@ -716,7 +716,8 @@ var Modulr = (function(window, app){
                         for (var uid in obj) {
                             // add to instance list
                             if (!INSTANCE_LIST[uid]) {
-                                log("please add this instance to the master package file: " + uid);
+                                // no more logs
+                                // log("please add this instance to the master package file: " + uid);
                                 INSTANCE_LIST[uid] = obj[uid];
                             }
                             arr.push({ uid:uid, src:obj[uid] });
