@@ -1,5 +1,5 @@
 /**
-* modulr-js v0.6.3.1 | 2016-07-06
+* modulr-js v1.0 | 2016-07-07
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -81,7 +81,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "0.6.3.1";
+            Proto.version = "1.0";
 
             /**
              * get current instance's config
@@ -723,7 +723,8 @@ var Modulr = (function(window, app){
                         for (var uid in obj) {
                             // add to instance list
                             if (!INSTANCE_LIST[uid]) {
-                                log("please add this instance to the master package file: " + uid);
+                                // no more logs
+                                // log("please add this instance to the master package file: " + uid);
                                 INSTANCE_LIST[uid] = obj[uid];
                             }
                             arr.push({ uid:uid, src:obj[uid] });
