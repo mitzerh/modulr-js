@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.0 | 2016-07-07
+* modulr-js v1.1 | 2016-10-25
 * AMD Development
 * by Helcon Mabesa
 * MIT license http://opensource.org/licenses/MIT
@@ -81,7 +81,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "1.0";
+            Proto.version = "1.1";
 
             /**
              * get current instance's config
@@ -484,7 +484,7 @@ var Modulr = (function(window, app){
                                 } else {
                                     processShimQueue(src);
                                 }
-                            });
+                            }, null, info.noCacheString || null);
                         }
                     };
 
@@ -824,7 +824,7 @@ var Modulr = (function(window, app){
              * loadScript
              * Credit to partial implementation: RequireJS
              */
-            function loadScript(src, id, callback, specType) {
+            function loadScript(src, id, callback, specType, noBrowserCache) {
                 var loaded = false,
                     script = document.createElement("script"),
                     scriptId = [CONTEXT || "", src].join("||");
@@ -904,7 +904,22 @@ var Modulr = (function(window, app){
                     script.addEventListener("error", onError, false);
                 }
 
-                script.src = src;
+                script.src = (function(src){
+                    var ret = src;
+                    if (CONFIG && CONFIG.cacheParam && !noBrowserCache) {
+                        var param = (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : "";
+                        // browser cache buster
+                        var cb = (function(){
+                            var c = new Date(),
+                                secs = c.getSeconds(),
+                                ret = [c.getFullYear(), c.getMonth() + 1, c.getDate(), c.getHours(), c.getMinutes()].join("");
+                            ret = ret + ((secs <= 30) ? 30 : 01);
+                            return ret;
+                        }());
+                        ret = src + ((src.indexOf("?") > -1) ? "&" : "?") + ((param) ? (param + "=") : "") + cb;
+                    }
+                    return ret;
+                }(src));
                 document.getElementsByTagName("head")[0].appendChild(script);
             }
 
