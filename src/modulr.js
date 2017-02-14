@@ -206,7 +206,8 @@ var Modulr = (function(window, app){
             Proto.config = function(config) {
                 if (!config.context && !config.instance) {
                     if (INSTANCE_INIT) {
-                        throwError("cannot re-configure Modulr");
+                        log("WARNING: Instance '"+config.instance+"' already exists! no configuration changes, returning instance instead..");
+                        return Proto.getInstance(config.instance);
                     } else {
                         CONFIG = config;
                     }
