@@ -960,7 +960,7 @@ var Modulr = (function(window, app){
             if (typeof tmp !== "undefined") {
                 ret = true;
 
-                if (ex.length > 1) {
+                if (ex.length > 0) {
                     while (ex.length > 0) {
                         tmp = tmp[ex.shift()];
                         if (typeof tmp === "undefined") {
