@@ -57,8 +57,8 @@ var Modulr = (function(window, app){
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
-                log("attempt to instantiate the same context: " + CONTEXT);
-                return false;
+                log("WARNING: attempt to instantiate the same context: " + CONTEXT + "\n. No configuration changes, returning instance instead..");
+                return MODULR_STACK[CONTEXT].instance;
             }
 
             // create context object
@@ -214,8 +214,13 @@ var Modulr = (function(window, app){
                 } else {
                     var instance = new Modulr(config);
 
-                    delete instance.config; // remote instantiation access
-                    delete instance.getInstance; // remove call from instances
+                    if (instance.config) {
+                        delete instance.config; // remote instantiation access
+                    }
+
+                    if (instance.getInstance) {
+                        delete instance.getInstance; // remove call from instances
+                    }
 
                     return instance;
                 }
