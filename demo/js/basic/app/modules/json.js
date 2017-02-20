@@ -8,7 +8,8 @@ Modulr.define("basic:modules/json", [
         JsonTest = require("models/json.test");
 
     JsonTest.execute(function(info){
-        Helper.status("json test done.");
+        var link = '<a href="/js/basic/app/modules/json.js">modules/json</a>: ';
+        Helper.status("json test done.", link);
         Helper.log("json test info: ", info);
     });
 

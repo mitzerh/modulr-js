@@ -1,24 +1,24 @@
-Modul R
-==========
-
-Javascript modular framework loosely based on [AMD JS API Specifications](https://github.com/amdjs/amdjs-api/wiki/AMD). 
-
-Please see [Wiki](https://github.com/mitzerh/ModulR/wiki) for documentation.
+# Modul R
 
 
-Demo
--------
+A web browser Javascript code dependency management, loosely based on [AMD JS API Specifications](https://github.com/amdjs/amdjs-api/wiki/AMD).
 
-A demo is available with this repository. You can run a quick node server with `http-server`:
+Please see [Wiki](https://github.com/mitzerh/ModulR/wiki) for detailed documentation.
 
-```vi
-# install http-server
-npm install http-server -g
+**Modul R** introduces the concept of packaged instances. Packaged instances are independent, but can communicate with other packages. Modules/instances don't need to be on the same aggregated/optimized files. Applications, especially large-scale implementations that requires to split application architecture in multiple files, can benefit from this.
 
-# go to demo folder and run
-cd demo
-http-server -p 1337
 
-# view on browser
-http://localhost:1337/
+## Quick Demo
+
+Run the simple demo, to view on your localhost
+
+```bash
+# run @ default port 9999
+npm run demo
+
+# custom port:
+npm run demo 9898
+
 ```
+
+Local host: [http://localhost:[PORT_NUMBER]/](http://localhost:[PORT_NUMBER]/)
