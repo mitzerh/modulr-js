@@ -14,8 +14,8 @@ Modulr.define("basic:helper", [
     };
 
     // sample status log in page
-    Helper.status = function(text) {
-        $(".status").append('<li>'+text+'</li>');
+    Helper.status = function(text, link) {
+        $(".status").append('<li>'+link + text+'</li>');
     };
 
     Helper.log = function() {

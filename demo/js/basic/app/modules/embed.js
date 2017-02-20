@@ -3,7 +3,8 @@ Modulr.define("basic:modules/embed", [
     "helper"
 ], function(require){
 
-    var Helper = require("helper");
-    Helper.status("embed module.");
+    var Helper = require("helper"),
+        link = '<a href="/js/basic/app/modules/embed.js">modules/embed</a>: ';
+    Helper.status("embed module.", link);
 
 });

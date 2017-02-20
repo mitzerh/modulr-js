@@ -14,8 +14,8 @@ Modulr.define("basic:helper", [
     };
 
     // sample status log in page
-    Helper.status = function(text) {
-        $(".status").append('<li>'+text+'</li>');
+    Helper.status = function(text, link) {
+        $(".status").append('<li>'+link + text+'</li>');
     };
 
     Helper.log = function() {
@@ -31,26 +31,29 @@ Modulr.define("basic:helper", [
 
     return Helper;
 
-});;Modulr.define("basic:main", [
+});
+;Modulr.define("basic:main", [
     "require",
     "jquery",
     "helper"
 ], function(require, $){
 
     var Helper = require("helper"),
-        modules = Helper.getModules();
+        modules = Helper.getModules()
+        link = '<a href="/js/basic/app/main.js">main</a>: ';
 
-    Helper.status("modules length: " + modules.length);
+    Helper.status("modules length: " + modules.length, link);
 
     require([
         "modules/json",
         "modules/display",
         "modules/embed"
     ], function(){
-        Helper.status("main loaded.");
+        Helper.status("main loaded.", link);
     });
 
-});;Modulr.define("basic:models/json.test", [
+});
+;Modulr.define("basic:models/json.test", [
     "require",
     "jquery",
     "helper"
@@ -59,7 +62,7 @@ Modulr.define("basic:helper", [
     var Helper = require("helper");
 
     // http://jsfiddle.net/mitzerh/yofwd1ax/
-    
+
     var urls = [
         "http://echo.jsontest.com/site/google/type/search",
         "http://echo.jsontest.com/site/yahoo/type/search",
@@ -75,7 +78,7 @@ Modulr.define("basic:helper", [
 
     // get ajax feed
     function getFeed(url, callback) {
-        
+
         // wow, they allow cross-domain calls! Understandable since it's for testing
         $.ajax({
             url: url,
@@ -84,15 +87,15 @@ Modulr.define("basic:helper", [
         }).error(function(){
             callback(false);
         });
-        
+
     };
 
     // my 'defer' function
     function process(callback) {
-        
+
         if (urls.length > 0) {
             var url = urls.shift();
-            
+
             getFeed(url, function(data){
                 if (data) {
                     // if type not yet defined in the object
@@ -100,7 +103,7 @@ Modulr.define("basic:helper", [
                     info[data.type].push(data.site);
                     // or if we want to pass the whole data
                     // info[data.type].push(data);
-                    
+
                 }
                 // the 'promise' call
                 process(callback);
@@ -108,33 +111,37 @@ Modulr.define("basic:helper", [
         } else {
             callback(info);
         }
-        
+
     }
 
     return {
         execute: function(callback) {
-            Helper.status("loading json..");
+            var link = '<a href="/js/basic/app/models/json.test.js">models/json.test</a>: ';
+            Helper.status("loading json..", link);
             process(callback);
         }
     };
 
-});;Modulr.define("basic:modules/display", [
+});
+;Modulr.define("basic:modules/display", [
+    "require",
+    "helper"
+], function(require){
+    var Helper = require("helper"),
+        link = '<a href="/js/basic/app/modules/display.js">modules/display</a>: ';
+    Helper.status("display module.", link);
+});
+;Modulr.define("basic:modules/embed", [
     "require",
     "helper"
 ], function(require){
 
-    var Helper = require("helper");
-    Helper.status("display module.");
+    var Helper = require("helper"),
+        link = '<a href="/js/basic/app/modules/embed.js">modules/embed</a>: ';
+    Helper.status("embed module.", link);
 
-});;Modulr.define("basic:modules/embed", [
-    "require",
-    "helper"
-], function(require){
-
-    var Helper = require("helper");
-    Helper.status("embed module.");
-
-});;Modulr.define("basic:modules/json", [
+});
+;Modulr.define("basic:modules/json", [
     "require",
     "models/json.test",
     "helper"
@@ -144,11 +151,13 @@ Modulr.define("basic:helper", [
         JsonTest = require("models/json.test");
 
     JsonTest.execute(function(info){
-        Helper.status("json test done.");
+        var link = '<a href="/js/basic/app/modules/json.js">modules/json</a>: ';
+        Helper.status("json test done.", link);
         Helper.log("json test info: ", info);
     });
 
-});;(function(){
+});
+;(function(){
 
     var path = window.location.pathname.split('/').reverse().slice(1).reverse().join('/'),
         domain = window.location.origin;
