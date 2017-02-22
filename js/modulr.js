@@ -262,7 +262,7 @@ var Modulr = (function(window, app){
                     throwError("loadPackageList() requires a callback!");
                 }
                 if (!isArray(packages) && typeof packages === "object") {
-                    loadPackages(packages, callback);
+                    loadPackages(packages, callback.apply(callback, Proto.require));
                 } else {
                     throwError("cannot load package list.");
                 }
