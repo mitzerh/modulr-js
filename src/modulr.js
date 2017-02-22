@@ -250,14 +250,12 @@ var Modulr = (function(window, app){
             /**
              * load the package/instances
              */
-            Proto.loadPackageList = function(packages) {
+            Proto.loadPackageList = function(packages, callback) {
+                if (typeof callback !== "function") {
+                    throwError("loadPackageList() requires a callback!");
+                }
                 if (!isArray(packages) && typeof packages === "object") {
-                    INSTANCE_LIST_READY = true;
-                    for (var id in packages) {
-                        if (!INSTANCE_LIST[id]) {
-                            INSTANCE_LIST[id] = packages[id];
-                        }
-                    }
+                    loadPackages(packages, callback);
                 } else {
                     throwError("cannot load package list.");
                 }
@@ -334,7 +332,7 @@ var Modulr = (function(window, app){
                 // load master file
                 loadMasterFile(function(){
                     // load other modulr packages
-                    loadPackages(function(){
+                    loadPackages(CONFIG.packages, function(){
                         isReady();
                     });
                 });
@@ -712,8 +710,8 @@ var Modulr = (function(window, app){
             }
 
             // load other included instances
-            function loadPackages(callback) {
-                if (!CONFIG.packages) {
+            function loadPackages(packages, callback) {
+                if (!packages) {
                     callback();
                 } else {
                     var arr = [];
@@ -731,9 +729,9 @@ var Modulr = (function(window, app){
                     };
 
                     // new - using package list master file
-                    if (isArray(CONFIG.packages)) {
-                        for (var i = 0; i < CONFIG.packages.length; i++) {
-                            var item = CONFIG.packages[i];
+                    if (isArray(packages)) {
+                        for (var i = 0; i < packages.length; i++) {
+                            var item = packages[i];
 
                             if (typeof item === "string" && INSTANCE_LIST[item]) {
                                 arr.push({ uid:item, src:INSTANCE_LIST[item] });
@@ -744,7 +742,7 @@ var Modulr = (function(window, app){
                             }
                         }
                     } else { // legacy
-                        setPackageObj(CONFIG.packages);
+                        setPackageObj(packages);
                     }
 
                     // load the instance stack that has the same queue
