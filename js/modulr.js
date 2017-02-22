@@ -191,8 +191,8 @@ var Modulr = (function(window, app){
                                 getDeps();
                             });
                         } else {
-                                    getDeps();
-                            }
+                            getDeps();
+                        }
                     };
 
                     if (!CONFIG.wait) {
@@ -229,6 +229,23 @@ var Modulr = (function(window, app){
                         delete instance.getInstance; // remove call from instances
                     }
 
+                    if (instance.loadPackageList) {
+                        delete instance.loadPackageList; // remove pacakge list loader - this is only for pre-run
+                    }
+
+                    // add custom package loader
+                    instance.loadPackage = function(packages, callback) {
+                        if (typeof callback !== "function") {
+                            throwError("loadPackageList() requires a callback!");
+                        }
+                        if (!isArray(packages) && typeof packages === "object") {
+                            loadPackages(packages, callback.apply(callback, Proto.require));
+                        } else {
+                            throwError("cannot load package list.");
+                        }
+                    };
+
+
                     return instance;
                 }
             };
@@ -257,12 +274,14 @@ var Modulr = (function(window, app){
             /**
              * load the package/instances
              */
-            Proto.loadPackageList = function(packages, callback) {
-                if (typeof callback !== "function") {
-                    throwError("loadPackageList() requires a callback!");
-                }
+            Proto.loadPackageList = function(packages) {
                 if (!isArray(packages) && typeof packages === "object") {
-                    loadPackages(packages, callback.apply(callback, Proto.require));
+                    INSTANCE_LIST_READY = true;
+                    for (var id in packages) {
+                        if (!INSTANCE_LIST[id]) {
+                            INSTANCE_LIST[id] = packages[id];
+                        }
+                    }
                 } else {
                     throwError("cannot load package list.");
                 }
