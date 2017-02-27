@@ -734,14 +734,14 @@ var Modulr = (function(window, app){
 
                         var src = setPathSrc(CONFIG.masterFile);
 
-                        if (MASTER_FILE && MASTER_FILE !== src) {
-                            throwError("Instance '" + CONST. instance + "' Error: Master file already defined: " + MASTER_FILE);
-                        } else {
-                            MASTER_FILE = src;
-                            loadScript(src, null, function(){
-                                callback();
-                            });
+                        // allow multiple master files
+                        if (!MASTER_FILE) {
+                            MASTER_FILE = [];
                         }
+                        MASTER_FILE.push(src);
+                        loadScript(src, null, function(){
+                            callback();
+                        });
 
                     }
 
