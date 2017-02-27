@@ -21,7 +21,8 @@ var Modulr = (function(window, app){
             MASTER_FILE = false,
             SHIM_QUEUE = {},
             DOM_READY = false,
-            READY_QUEUE = [];
+            READY_QUEUE = [],
+            GLOBAL_CACHE_PARAM_VAR = null;
 
         var executeReadyState = function() {
             DOM_READY = true;
@@ -226,6 +227,10 @@ var Modulr = (function(window, app){
                         delete instance.loadPackageList; // remove pacakge list loader - this is only for pre-run
                     }
 
+                    if (instance.setGlobalCacheParam) {
+                        delete instance.setGlobalCacheParam; // remove setter - only for pre-run
+                    }
+
                     // add custom package loader
                     instance.loadPackage = function(packages, callback) {
                         if (typeof callback !== "function") {
@@ -277,6 +282,15 @@ var Modulr = (function(window, app){
                     }
                 } else {
                     throwError("cannot load package list.");
+                }
+            };
+
+            /**
+             * set a global static cache parameter
+             */
+            Proto.setGlobalCacheParam = function(val) {
+                if (typeof val === "string" || typeof val === "number") {
+                    GLOBAL_CACHE_PARAM_VAR = val;
                 }
             };
 
@@ -922,10 +936,11 @@ var Modulr = (function(window, app){
 
                 script.src = (function(src){
                     var ret = src;
-                    if (CONFIG && CONFIG.cacheParam && !noBrowserCache) {
-                        var param = (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : "";
+                    if ((CONFIG && CONFIG.cacheParam || GLOBAL_CACHE_PARAM_VAR) && !noBrowserCache) {
+                        // if global cache var defined, used "v", if no custom param
+                        var param = (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : (GLOBAL_CACHE_PARAM_VAR) ? "v" : "";
                         // browser cache buster
-                        var cb = (function(){
+                        var cb = GLOBAL_CACHE_PARAM_VAR || (function(){
                             var c = new Date(),
                                 secs = c.getSeconds(),
                                 ret = [c.getFullYear(), c.getMonth() + 1, c.getDate(), c.getHours(), c.getMinutes()].join("");
