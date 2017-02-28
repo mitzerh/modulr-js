@@ -274,7 +274,6 @@ var Modulr = (function(window, app){
              */
             Proto.loadPackageList = function(packages) {
                 if (!isArray(packages) && typeof packages === "object") {
-                    INSTANCE_LIST_READY = true;
                     for (var id in packages) {
                         if (!INSTANCE_LIST[id]) {
                             INSTANCE_LIST[id] = packages[id];
@@ -719,26 +718,21 @@ var Modulr = (function(window, app){
 
                 } else {
 
-                    if (INSTANCE_LIST_READY) {
+                    var src = setPathSrc(CONFIG.masterFile);
+                    // allow multiple master files
+                    if (!MASTER_FILE) {
+                        MASTER_FILE = [];
+                    }
 
-                        callback();
-
-                    } else {
-
-                        var src = setPathSrc(CONFIG.masterFile);
-
-                        // allow multiple master files
-                        if (!MASTER_FILE) {
-                            MASTER_FILE = [];
-                        }
+                    if (MASTER_FILE.indexOf(src) === -1) {
                         MASTER_FILE.push(src);
                         loadScript(src, null, function(){
                             callback();
                         });
-
+                    } else {
+                        callback();
                     }
-
-
+                    
                 }
             }
 
