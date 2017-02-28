@@ -300,6 +300,13 @@ var Modulr = (function(window, app){
                 }
             };
 
+            /**
+             * get the cache param if set
+             */
+            Proto.getGlobalCacheParam = function() {
+                return GLOBAL_CACHE_PARAM_VAR;
+            };
+
             Proto.getPackageListInfo = function() {
                 return {
                     master: MASTER_FILE,
@@ -739,7 +746,7 @@ var Modulr = (function(window, app){
                     } else {
                         callback();
                     }
-                    
+
                 }
             }
 
