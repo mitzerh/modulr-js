@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.2.2 | 2017-02-28
+* modulr-js v1.2.3 | 2017-07-14
 * A Javascript Psuedo-AMD Browser Dependency Manager
 * by Helcon Mabesa
 * MIT
@@ -29,7 +29,8 @@ var Modulr = (function(window, app){
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [],
-            GLOBAL_CACHE_PARAM_VAR = null;
+            GLOBAL_CACHE_PARAM_VAR = null,
+            GLOBAL_CACHE_PARAM_COND = [];
 
         var executeReadyState = function() {
             DOM_READY = true;
@@ -82,7 +83,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "1.2.2";
+            Proto.version = "1.2.3";
 
             /**
              * get current instance's config
@@ -238,6 +239,10 @@ var Modulr = (function(window, app){
                         delete instance.setGlobalCacheParam; // remove setter - only for pre-run
                     }
 
+                    if (instance.setGlobalCacheCond) {
+                        delete instance.setGlobalCacheCond; // remove setter - only for pre-run
+                    }
+
                     // add custom package loader
                     instance.loadPackage = function(packages, callback) {
                         if (typeof callback !== "function") {
@@ -297,6 +302,15 @@ var Modulr = (function(window, app){
             Proto.setGlobalCacheParam = function(val) {
                 if (typeof val === "string" || typeof val === "number") {
                     GLOBAL_CACHE_PARAM_VAR = val;
+                }
+            };
+
+            /**
+             * set custom cache conditions
+             */
+            Proto.setGlobalCacheCond = function(list) {
+                if (Array.isArray(list)) {
+                    GLOBAL_CACHE_PARAM_COND = GLOBAL_CACHE_PARAM_COND.concat(list);
                 }
             };
 
@@ -527,7 +541,11 @@ var Modulr = (function(window, app){
                                 } else {
                                     processShimQueue(src);
                                 }
-                            }, null, info.noCacheString || null);
+                            }, null, {
+                                noCacheString: info.noCacheString || null,
+                                noStore: info.noStore || null,
+                                queryParam: info.queryParam || null
+                            });
                         }
                     };
 
@@ -862,10 +880,35 @@ var Modulr = (function(window, app){
              * loadScript
              * Credit to partial implementation: RequireJS
              */
-            function loadScript(src, id, callback, specType, noBrowserCache) {
+            function loadScript(src, id, callback, specType, cacheInfo) {
+
+                cacheInfo = cacheInfo || {};
+
                 var loaded = false,
                     script = document.createElement("script"),
-                    scriptId = [CONTEXT || "", src].join("||");
+                    scriptId = [CONTEXT || "", src].join("||"),
+                    noBrowserCache = cacheInfo.noCacheString || null,
+                    customCacheCond = findCacheCond(src);
+
+                var noStore = (function(){
+                    var res = null;
+                    if (customCacheCond && customCacheCond.noStore === true) {
+                        res = true;
+                    } else {
+                        res = (noBrowserCache === true) ? null : cacheInfo.noStore;
+                    }
+                    return res;
+                })();
+
+                var queryParam = (function(){
+                    var res = null;
+                    if (customCacheCond && typeof customCacheCond.param === 'string') {
+                        res = customCacheCond.param;
+                    } else {
+                        res = cacheInfo.queryParam;
+                    }
+                    return res;
+                })();
 
                 var onLoad = function(evt) {
                     //Using currentTarget instead of target for Firefox 2.0's sake. Not
@@ -944,17 +987,26 @@ var Modulr = (function(window, app){
 
                 script.src = (function(src){
                     var ret = src;
-                    if ((CONFIG && CONFIG.cacheParam || GLOBAL_CACHE_PARAM_VAR) && !noBrowserCache) {
+                    if (customCacheCond && noStore && queryParam) {
+                        ret = src + ((src.indexOf("?") > -1) ? "&" : "?") + ((queryParam) ? (queryParam + "=") : "") + (new Date()).getTime();
+                    } else if ((CONFIG && CONFIG.cacheParam || GLOBAL_CACHE_PARAM_VAR) && !noBrowserCache) {
                         // if global cache var defined, used "v", if no custom param
-                        var param = (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : (GLOBAL_CACHE_PARAM_VAR) ? "v" : "";
+                        var param = (queryParam) ? queryParam : (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : (GLOBAL_CACHE_PARAM_VAR) ? "v" : "";
                         // browser cache buster
-                        var cb = GLOBAL_CACHE_PARAM_VAR || (function(){
-                            var c = new Date(),
-                                secs = c.getSeconds(),
-                                ret = [c.getFullYear(), c.getMonth() + 1, c.getDate(), c.getHours(), c.getMinutes()].join("");
-                            ret = ret + ((secs <= 30) ? 30 : 01);
-                            return ret;
-                        }());
+                        var cb = (function(){
+                            var res;
+                            if (noStore) {
+                                res = (new Date()).getTime();
+                            } else if (GLOBAL_CACHE_PARAM_VAR) {
+                                res = GLOBAL_CACHE_PARAM_VAR;
+                            } else {
+                                var c = new Date(),
+                                    secs = c.getSeconds(),
+                                    ret = [c.getFullYear(), c.getMonth() + 1, c.getDate(), c.getHours(), c.getMinutes()].join("");
+                                res = ret + ((secs <= 30) ? 30 : 1);
+                            }
+                            return res;
+                        })();
                         ret = src + ((src.indexOf("?") > -1) ? "&" : "?") + ((param) ? (param + "=") : "") + cb;
                     }
                     return ret;
@@ -1079,6 +1131,24 @@ var Modulr = (function(window, app){
                 ret.push(arr[i]);
             }
             return ret;
+        }
+
+        /**
+         * find match in custom cond
+         */
+        function findCacheCond(src) {
+            var list = GLOBAL_CACHE_PARAM_COND,
+                res = null;
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                if (typeof item === 'object' && item.regex instanceof RegExp) {
+                    if (item.regex.test(src)) {
+                        res = item;
+                        break;
+                    }
+                }
+            }
+            return res;
         }
 
         // from requirejs
