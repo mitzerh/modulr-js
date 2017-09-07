@@ -18,7 +18,8 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
             INSTANCE_LIST_READY = false,
-            MASTER_FILE = false,
+            MASTER_FILE = null,
+            MASTER_FILE_LOADED = [],
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [],
@@ -84,6 +85,15 @@ var Modulr = (function(window, app){
             Proto.getConfig = function() {
                 return CONFIG;
             };
+
+            /**
+             * load master file only once, call this inside the master file
+             */
+             Proto.setMasterLoaded = function(path) {
+                 if (path) {
+                     MASTER_FILE_LOADED.push(path);
+                 }
+             };
 
             /**
              * get a specific instance via context
@@ -743,21 +753,25 @@ var Modulr = (function(window, app){
 
                 } else {
 
-                    var src = setPathSrc(CONFIG.masterFile);
-                    // allow multiple master files
-                    if (!MASTER_FILE) {
-                        MASTER_FILE = [];
-                    }
-
-                    if (MASTER_FILE.indexOf(src) === -1) {
-                        MASTER_FILE.push(src);
-                        loadScript(src, null, function(){
-                            callback();
-                        });
-                    } else {
+                    if (MASTER_FILE_LOADED.indexOf(CONFIG.masterFile) > -1) {
                         callback();
-                    }
+                    } else {
+                        var src = setPathSrc(CONFIG.masterFile);
+                        // allow multiple master files
+                        if (!MASTER_FILE) {
+                            MASTER_FILE = [];
+                        }
 
+                        if (MASTER_FILE.indexOf(src) === -1) {
+                            MASTER_FILE.push(src);
+
+                            loadScript(src, null, function(){
+                                callback();
+                            });
+                        } else {
+                            callback();
+                        }
+                    }
                 }
             }
 

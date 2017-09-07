@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.2.3 | 2017-07-14
+* modulr-js v1.2.4 | 2017-09-07
 * A Javascript Psuedo-AMD Browser Dependency Manager
 * by Helcon Mabesa
 * MIT
@@ -25,7 +25,8 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
             INSTANCE_LIST_READY = false,
-            MASTER_FILE = false,
+            MASTER_FILE = null,
+            MASTER_FILE_LOADED = [],
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [],
@@ -83,7 +84,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "1.2.3";
+            Proto.version = "1.2.4";
 
             /**
              * get current instance's config
@@ -91,6 +92,15 @@ var Modulr = (function(window, app){
             Proto.getConfig = function() {
                 return CONFIG;
             };
+
+            /**
+             * load master file only once, call this inside the master file
+             */
+             Proto.setMasterLoaded = function(path) {
+                 if (path) {
+                     MASTER_FILE_LOADED.push(path);
+                 }
+             };
 
             /**
              * get a specific instance via context
@@ -750,21 +760,25 @@ var Modulr = (function(window, app){
 
                 } else {
 
-                    var src = setPathSrc(CONFIG.masterFile);
-                    // allow multiple master files
-                    if (!MASTER_FILE) {
-                        MASTER_FILE = [];
-                    }
-
-                    if (MASTER_FILE.indexOf(src) === -1) {
-                        MASTER_FILE.push(src);
-                        loadScript(src, null, function(){
-                            callback();
-                        });
-                    } else {
+                    if (MASTER_FILE_LOADED.indexOf(CONFIG.masterFile) > -1) {
                         callback();
-                    }
+                    } else {
+                        var src = setPathSrc(CONFIG.masterFile);
+                        // allow multiple master files
+                        if (!MASTER_FILE) {
+                            MASTER_FILE = [];
+                        }
 
+                        if (MASTER_FILE.indexOf(src) === -1) {
+                            MASTER_FILE.push(src);
+
+                            loadScript(src, null, function(){
+                                callback();
+                            });
+                        } else {
+                            callback();
+                        }
+                    }
                 }
             }
 

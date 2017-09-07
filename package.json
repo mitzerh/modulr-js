@@ -1,6 +1,6 @@
 {
   "name": "modulr-js",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "A Javascript Psuedo-AMD Browser Dependency Manager",
   "devDependencies": {
     "express": "^4.14.1",
