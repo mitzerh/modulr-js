@@ -1,0 +1,22 @@
+{
+  "name": "modulr",
+  "version": "1.2.4",
+  "homepage": "https://github.com/mitzerh/modulr-js",
+  "authors": [
+    "Helcon Mabesa <hmabesa@gmail.com>"
+  ],
+  "description": "A Javascript Psuedo-AMD Browser Dependency Manager",
+  "main": "js/modulr.min.js",
+  "keywords": [
+    "modulr",
+    "amd"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
