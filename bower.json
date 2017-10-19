@@ -5,6 +5,10 @@
   "authors": [
     "Helcon Mabesa <hmabesa@gmail.com>"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mitzerh/modulr-js.git"
+  },
   "description": "A Javascript Psuedo-AMD Browser Dependency Manager",
   "main": "js/modulr.min.js",
   "keywords": [
@@ -16,7 +20,8 @@
     "**/.*",
     "node_modules",
     "bower_components",
-    "test",
-    "tests"
+    "demo",
+    "img",
+    "src"
   ]
 }
