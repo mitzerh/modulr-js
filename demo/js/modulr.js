@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.2.4 | 2017-09-07
+* modulr-js v1.2.5 | 2017-11-28
 * A Javascript Psuedo-AMD Browser Dependency Manager
 * by Helcon Mabesa
 * MIT
@@ -30,14 +30,23 @@ var Modulr = (function(window, app){
             SHIM_QUEUE = {},
             DOM_READY = false,
             READY_QUEUE = [],
+            EXECUTE_LISTENER = null,
             GLOBAL_CACHE_PARAM_VAR = null,
             GLOBAL_CACHE_PARAM_COND = [];
 
         var executeReadyState = function() {
-            DOM_READY = true;
-            while (READY_QUEUE.length > 0) {
-                var fn = READY_QUEUE.shift();
-                fn();
+            var trigger = function() {
+                DOM_READY = true;
+                while (READY_QUEUE.length > 0) {
+                    var fn = READY_QUEUE.shift();
+                    fn();
+                }
+            };
+
+            if (EXECUTE_LISTENER) {
+                EXECUTE_LISTENER(trigger);
+            } else {
+                trigger();
             }
         };
 
@@ -84,7 +93,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "1.2.4";
+            Proto.version = "1.2.5";
 
             /**
              * get current instance's config
@@ -107,6 +116,15 @@ var Modulr = (function(window, app){
              */
             Proto.getInstance = function(context) {
                 return (MODULR_STACK[context]) ? MODULR_STACK[context].instance : null;
+            };
+
+            /**
+             * set custom execution listener
+             */
+            Proto.setExecuteListener = function(callback) {
+                if (!EXECUTE_LISTENER && typeof callback === 'function') {
+                    EXECUTE_LISTENER = callback;
+                }
             };
 
             /**
@@ -251,6 +269,10 @@ var Modulr = (function(window, app){
 
                     if (instance.setGlobalCacheCond) {
                         delete instance.setGlobalCacheCond; // remove setter - only for pre-run
+                    }
+
+                    if (instance.setExecuteListener) {
+                        delete instance.setExecuteListener; // remove custom execute listener
                     }
 
                     // add custom package loader
