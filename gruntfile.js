@@ -32,7 +32,7 @@ module.exports = function(grunt) {
                 dest: 'js/modulr.js',
                 options: {
                     process: function (content, srcpath) {
-                        
+
                         content = content.replace('${version}', conf.version);
 
                         content = content.replace('\/\/inclue:${domready}', (function(){
@@ -56,7 +56,7 @@ module.exports = function(grunt) {
                 dest: 'demo/js/modulr.js'
 
             }
-            
+
         },
 
         concat: {
@@ -132,7 +132,7 @@ module.exports = function(grunt) {
             'clean:temp'
         ];
     }
- 
+
     grunt.registerTask('default', tasks);
 
     grunt.initConfig(config);
