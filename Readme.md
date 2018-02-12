@@ -4,7 +4,7 @@ A web browser Javascript code dependency management, loosely based on [AMD JS AP
 
 Please see [Wiki](https://github.com/mitzerh/ModulR/wiki) for detailed documentation.
 
-**Latest Stabe/Release version `v1.2.5`:** [`modulr.js`](https://raw.githubusercontent.com/mitzerh/modulr-js/master/js/modulr.js) | [`modulr.min.js`](https://raw.githubusercontent.com/mitzerh/modulr-js/master/js/modulr.min.js) | [Release Notes](https://github.com/mitzerh/modulr-js/wiki/Release-Notes)
+**Latest Stabe/Release version `v1.3.0`:** [`modulr.js`](https://raw.githubusercontent.com/mitzerh/modulr-js/master/js/modulr.js) | [`modulr.min.js`](https://raw.githubusercontent.com/mitzerh/modulr-js/master/js/modulr.min.js) | [Release Notes](https://github.com/mitzerh/modulr-js/wiki/Release-Notes)
 
 
 **Modul R** introduces the concept of packaged instances. Packaged instances are independent, but can communicate with other packages. Modules/instances don't need to be on the same aggregated/optimized files. Applications, especially large-scale implementations that requires to split application architecture in multiple files, can benefit from this.
