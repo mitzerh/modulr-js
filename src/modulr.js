@@ -1255,16 +1255,18 @@ var Modulr = (function(window, app){
                 }
             };
 
-            sender(function(data){
+            sender(function(){
                 if (_resolve) {
+                    var args = Array.prototype.slice.call(arguments);
                     while (_resolve.length > 0) {
                         var fn = _resolve.shift();
-                        data = fn(data);
+                        data = fn.apply(fn, args);
                     }
                 }
             }, function(data){
                 if (_reject) {
-                    _reject(data);
+                    var args = Array.prototype.slice.call(arguments);
+                    _reject.apply(_reject, args);
                 }
             });
         }
