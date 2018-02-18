@@ -7,9 +7,6 @@ var Modulr = (function(window, app){
 
     (function(){
 
-        var CONST = {};
-        CONST.prefix = "[Modulr]";
-
         var MODULR_STACK = {},
             MODULR_STACK_QUEUE = {},
             LOADED_SCRIPTS = {},
@@ -25,7 +22,8 @@ var Modulr = (function(window, app){
             READY_QUEUE = [],
             EXECUTE_LISTENER = null,
             GLOBAL_CACHE_PARAM_VAR = null,
-            GLOBAL_CACHE_PARAM_COND = [];
+            GLOBAL_CACHE_PARAM_COND = [],
+            LOG_PREFIX = '[Modulr]';
 
         var executeReadyState = function() {
             var trigger = function() {
@@ -1192,7 +1190,7 @@ var Modulr = (function(window, app){
         function log() {
             var args = arguments;
             if (typeof args[0] === "string") {
-                args[0] = [CONST.prefix, args[0]].join(" ");
+                args[0] = [LOG_PREFIX, args[0]].join(" ");
             }
 
             if (window.console && window.console.log) {
@@ -1205,7 +1203,7 @@ var Modulr = (function(window, app){
         }
 
         function throwError(str) {
-            str = [CONST.prefix, str].join(" ");
+            str = [LOG_PREFIX, str].join(" ");
             throw new Error(str);
         }
 
