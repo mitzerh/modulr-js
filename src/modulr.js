@@ -702,12 +702,12 @@ var Modulr = (function(window, app){
 
             function isExtendedInstance(id) {
                 var found = (id.indexOf(':') > -1) ? true : false,
-                    sp = id.split(':'),
-                    context = sp[0] || false,
-                    moduleId = sp[1] || false,
                     ret = false;
 
                 if (found) {
+                    var sp = id.split(':'),
+                        context = sp[0] || false,
+                        moduleId = sp[1] || false;
                     // check if instance
                     if (context === 'getInstance' && moduleId) {
                         ret = {
