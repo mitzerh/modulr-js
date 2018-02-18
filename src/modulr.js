@@ -251,28 +251,18 @@ var Modulr = (function(window, app){
                 } else {
                     var instance = new Modulr(config);
 
-                    if (instance.config) {
-                        delete instance.config; // remote instantiation access
-                    }
-
-                    if (instance.getInstance) {
-                        delete instance.getInstance; // remove call from instances
-                    }
-
-                    if (instance.loadPackageList) {
-                        delete instance.loadPackageList; // remove pacakge list loader - this is only for pre-run
-                    }
-
-                    if (instance.setGlobalCacheParam) {
-                        delete instance.setGlobalCacheParam; // remove setter - only for pre-run
-                    }
-
-                    if (instance.setGlobalCacheCond) {
-                        delete instance.setGlobalCacheCond; // remove setter - only for pre-run
-                    }
-
-                    if (instance.setExecuteListener) {
-                        delete instance.setExecuteListener; // remove custom execute listener
+                    // remove from application instances
+                    // - remote instantiation access
+                    // - remove call from instances
+                    // - remove pacakge list loader - this is only for pre-run
+                    // - remove setter - only for pre-run
+                    // - remove custom execute listener
+                    var remove = ['config', 'getInstance', 'loadPackageList', 'setGlobalCacheParam', 'setGlobalCacheCond', 'setExecuteListener'];
+                    for (var i = 0; i < remove.length; i++) {
+                        var id = remove[i];
+                        if (instance[id]) {
+                            delete instance[id];
+                        }
                     }
 
                     // add custom package loader
