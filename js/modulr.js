@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.3.0 | 2018-02-17
+* modulr-js v2.0.0 | 2018-02-17
 * A Javascript Psuedo-AMD Browser Dependency Manager
 * by Helcon Mabesa
 * MIT
@@ -91,7 +91,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = '1.3.0';
+            Proto.version = '2.0.0';
 
             /**
              * get current instance's config
@@ -709,12 +709,12 @@ var Modulr = (function(window, app){
 
             function isExtendedInstance(id) {
                 var found = (id.indexOf(':') > -1) ? true : false,
-                    sp = id.split(':'),
-                    context = sp[0] || false,
-                    moduleId = sp[1] || false,
                     ret = false;
 
                 if (found) {
+                    var sp = id.split(':'),
+                        context = sp[0] || false,
+                        moduleId = sp[1] || false;
                     // check if instance
                     if (context === 'getInstance' && moduleId) {
                         ret = {
