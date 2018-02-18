@@ -198,35 +198,42 @@ var Modulr = (function(window, app){
                 if (typeof deps === "string") {
                     return getDefinedModule(deps);
                 } else if (isArray(deps)) {
-                    var getDeps = function() {
-                        // get dependencies
-                        MODULE.get(null, deps, function(args){
-                            getFactory(callback, args);
-                        });
-                    };
 
-                    var trigger = function() {
-                        // initialize the first time
-                        if (!INSTANCE_INIT) {
-                            INSTANCE_INIT = true;
-
-                            initializeInstance(function(){
-                                getDeps();
+                    return new UtilPromise(function(resolve){
+                        var getDeps = function() {
+                            // get dependencies
+                            MODULE.get(null, deps, function(args){
+                                if (typeof callback === 'function') {
+                                    getFactory(callback, args);
+                                } else {
+                                    resolve.apply(resolve, args);
+                                }
                             });
-                        } else {
-                            getDeps();
-                        }
-                    };
+                        };
 
-                    if (!CONFIG.wait) {
-                        trigger();
-                    } else {
-                        if (DOM_READY) {
+                        var trigger = function() {
+                            // initialize the first time
+                            if (!INSTANCE_INIT) {
+                                INSTANCE_INIT = true;
+
+                                initializeInstance(function(){
+                                    getDeps();
+                                });
+                            } else {
+                                getDeps();
+                            }
+                        };
+
+                        if (!CONFIG.wait) {
                             trigger();
                         } else {
-                            READY_QUEUE.push(trigger);
+                            if (DOM_READY) {
+                                trigger();
+                            } else {
+                                READY_QUEUE.push(trigger);
+                            }
                         }
-                    }
+                    });
                 }
             };
 
@@ -1227,6 +1234,41 @@ var Modulr = (function(window, app){
         function throwError(str) {
             str = [CONST.prefix, str].join(" ");
             throw new Error(str);
+        }
+
+        function UtilPromise(sender) {
+
+            var Proto = this,
+                _resolve = [],
+                _reject = null;
+
+            Proto.then = Proto.resolve = function(cb){
+                if (typeof cb === 'function') {
+                    _resolve.push(cb);
+                }
+                return this;
+            };
+
+            Proto.reject = function(cb) {
+                if (typeof cb === 'function') {
+                    _reject = cb;
+                }
+            };
+
+            sender(function(){
+                if (_resolve) {
+                    var args = Array.prototype.slice.call(arguments);
+                    while (_resolve.length > 0) {
+                        var fn = _resolve.shift();
+                        data = fn.apply(fn, args);
+                    }
+                }
+            }, function(data){
+                if (_reject) {
+                    var args = Array.prototype.slice.call(arguments);
+                    _reject.apply(_reject, args);
+                }
+            });
         }
 
         return (new Modulr());
