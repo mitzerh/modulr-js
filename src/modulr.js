@@ -5,7 +5,7 @@ var Modulr = (function(window, app){
 
 }(window,
 
-    (function(DomReady){
+    (function(){
 
         var CONST = {};
         CONST.prefix = "[Modulr]";
@@ -21,7 +21,7 @@ var Modulr = (function(window, app){
             MASTER_FILE = null,
             MASTER_FILE_LOADED = [],
             SHIM_QUEUE = {},
-            DOM_READY = false,
+            ON_READY = false,
             READY_QUEUE = [],
             EXECUTE_LISTENER = null,
             GLOBAL_CACHE_PARAM_VAR = null,
@@ -29,7 +29,7 @@ var Modulr = (function(window, app){
 
         var executeReadyState = function() {
             var trigger = function() {
-                DOM_READY = true;
+                ON_READY = true;
                 while (READY_QUEUE.length > 0) {
                     var fn = READY_QUEUE.shift();
                     fn();
@@ -43,8 +43,8 @@ var Modulr = (function(window, app){
             }
         };
 
-        DomReady(function(){
-            if (!DOM_READY) {
+        OnReady(function(){
+            if (!ON_READY) {
                 executeReadyState();
             }
         });
@@ -56,7 +56,7 @@ var Modulr = (function(window, app){
 
             CONFIG = CONFIG || {};
             // default context
-            CONFIG.context = CONFIG.instance || CONFIG.context || "_";
+            CONFIG.context = CONFIG.instance || CONFIG.context || null;
             // wait for DOM or PAGE ready (true default)
             CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
 
@@ -227,7 +227,7 @@ var Modulr = (function(window, app){
                         if (!CONFIG.wait) {
                             trigger();
                         } else {
-                            if (DOM_READY) {
+                            if (ON_READY) {
                                 trigger();
                             } else {
                                 READY_QUEUE.push(trigger);
@@ -361,7 +361,7 @@ var Modulr = (function(window, app){
             };
 
             /**
-             * set ready callback for in-page execution if you don't want to use DOM_READY
+             * set ready callback for in-page execution if you don't want to use ON_READY
              */
             Proto.setReady = function() {
                 executeReadyState();
@@ -1271,15 +1271,22 @@ var Modulr = (function(window, app){
             });
         }
 
+        function OnReady(done) {
+            if (window.addEventListener) {
+                window.addEventListener('load', done, false);
+            } else if (window.attachEvent) {
+                window.attachEvent('onload', done);
+            } else {
+                var prev = window.onload;
+                window.onload = function(){
+                    prev();
+                    done();
+                };
+            }
+        }
+
         return (new Modulr());
 
-    }(
-
-        (function(){
-            //inclue:${domready}
-            return domready;
-        }())
-
-    ))
+    }())
 
 ));
