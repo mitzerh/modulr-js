@@ -1,5 +1,5 @@
 /**
-* modulr-js v1.2.5 | 2017-11-28
+* modulr-js v2.0.0 | 2018-02-17
 * A Javascript Psuedo-AMD Browser Dependency Manager
 * by Helcon Mabesa
 * MIT
@@ -12,10 +12,7 @@ var Modulr = (function(window, app){
 
 }(window,
 
-    (function(DomReady){
-
-        var CONST = {};
-        CONST.prefix = "[Modulr]";
+    (function(){
 
         var MODULR_STACK = {},
             MODULR_STACK_QUEUE = {},
@@ -25,18 +22,19 @@ var Modulr = (function(window, app){
             LOADED_INSTANCE_INCLUDES_STACK_QUEUE = {},
             INSTANCE_LIST = {},
             INSTANCE_LIST_READY = false,
-            MASTER_FILE = null,
+            MASTER_FILE = [],
             MASTER_FILE_LOADED = [],
             SHIM_QUEUE = {},
-            DOM_READY = false,
+            ON_READY = false,
             READY_QUEUE = [],
             EXECUTE_LISTENER = null,
             GLOBAL_CACHE_PARAM_VAR = null,
-            GLOBAL_CACHE_PARAM_COND = [];
+            GLOBAL_CACHE_PARAM_COND = [],
+            LOG_PREFIX = '[Modulr]';
 
         var executeReadyState = function() {
             var trigger = function() {
-                DOM_READY = true;
+                ON_READY = true;
                 while (READY_QUEUE.length > 0) {
                     var fn = READY_QUEUE.shift();
                     fn();
@@ -50,8 +48,8 @@ var Modulr = (function(window, app){
             }
         };
 
-        DomReady(function(){
-            if (!DOM_READY) {
+        OnReady(function(){
+            if (!ON_READY) {
                 executeReadyState();
             }
         });
@@ -63,20 +61,20 @@ var Modulr = (function(window, app){
 
             CONFIG = CONFIG || {};
             // default context
-            CONFIG.context = CONFIG.instance || CONFIG.context || "_";
+            CONFIG.context = CONFIG.instance || CONFIG.context || '_';
             // wait for DOM or PAGE ready (true default)
-            CONFIG.wait = (typeof CONFIG.wait === "boolean") ? CONFIG.wait : true;
+            CONFIG.wait = (typeof CONFIG.wait === 'boolean') ? CONFIG.wait : true;
 
             var CONTEXT = CONFIG.context;
 
             // validate context
             if (!isValidContextId(CONTEXT)) {
-                throwError("invalid context: '"+CONTEXT+"'");
+                throwError('invalid context:', CONTEXT);
             }
 
             // cannot instantiate same context
             if (MODULR_STACK[CONTEXT]) {
-                log("WARNING: attempt to instantiate the same context: " + CONTEXT + "\n. No configuration changes, returning instance instead..");
+                log('WARNING: attempt to instantiate the same context:', CONTEXT, '\n. No configuration changes, returning instance instead..');
                 return MODULR_STACK[CONTEXT].instance;
             }
 
@@ -93,7 +91,7 @@ var Modulr = (function(window, app){
             var Proto = this;
 
             // version
-            Proto.version = "1.2.5";
+            Proto.version = '2.0.0';
 
             /**
              * get current instance's config
@@ -101,15 +99,6 @@ var Modulr = (function(window, app){
             Proto.getConfig = function() {
                 return CONFIG;
             };
-
-            /**
-             * load master file only once, call this inside the master file
-             */
-             Proto.setMasterLoaded = function(path) {
-                 if (path) {
-                     MASTER_FILE_LOADED.push(path);
-                 }
-             };
 
             /**
              * get a specific instance via context
@@ -137,9 +126,9 @@ var Modulr = (function(window, app){
 
                 for (var item in LOADED_SCRIPTS) {
 
-                    var sp = item.split("||"),
+                    var sp = item.split('||'),
                         context = sp[0],
-                        url = sp[1] || "";
+                        url = sp[1] || '';
 
                     if (context && url) {
                         if (!scripts[context]) { scripts[context] = []; }
@@ -156,7 +145,7 @@ var Modulr = (function(window, app){
              */
             Proto.define = function(id, deps, factory) {
                 // if invalid id
-                if (!isValidId(id)) { throwError("invalid id: '" + id + "'."); }
+                if (!isValidId(id)) { throwError('invalid id:', id); }
 
                 // id and factory only
                 if (arguments.length === 2 && !isArray(deps)) {
@@ -202,38 +191,45 @@ var Modulr = (function(window, app){
              */
             Proto.require = function(deps, callback) {
                 // if deps is string, it's called from a factory
-                if (typeof deps === "string") {
+                if (typeof deps === 'string') {
                     return getDefinedModule(deps);
                 } else if (isArray(deps)) {
-                    var getDeps = function() {
-                        // get dependencies
-                        MODULE.get(null, deps, function(args){
-                            getFactory(callback, args);
-                        });
-                    };
 
-                    var trigger = function() {
-                        // initialize the first time
-                        if (!INSTANCE_INIT) {
-                            INSTANCE_INIT = true;
-
-                            initializeInstance(function(){
-                                getDeps();
+                    return new UtilPromise(function(resolve){
+                        var getDeps = function() {
+                            // get dependencies
+                            MODULE.get(null, deps, function(args){
+                                if (typeof callback === 'function') {
+                                    getFactory(callback, args);
+                                } else {
+                                    resolve.apply(resolve, args);
+                                }
                             });
-                        } else {
-                            getDeps();
-                        }
-                    };
+                        };
 
-                    if (!CONFIG.wait) {
-                        trigger();
-                    } else {
-                        if (DOM_READY) {
+                        var trigger = function() {
+                            // initialize the first time
+                            if (!INSTANCE_INIT) {
+                                INSTANCE_INIT = true;
+
+                                initializeInstance(function(){
+                                    getDeps();
+                                });
+                            } else {
+                                getDeps();
+                            }
+                        };
+
+                        if (!CONFIG.wait) {
                             trigger();
                         } else {
-                            READY_QUEUE.push(trigger);
+                            if (ON_READY) {
+                                trigger();
+                            } else {
+                                READY_QUEUE.push(trigger);
+                            }
                         }
-                    }
+                    });
                 }
             };
 
@@ -243,7 +239,7 @@ var Modulr = (function(window, app){
             Proto.config = function(config) {
                 if (!config.context && !config.instance) {
                     if (INSTANCE_INIT) {
-                        log("WARNING: Instance '"+config.instance+"' already exists! no configuration changes, returning instance instead..");
+                        log('WARNING: Instance "'+config.instance+'" already exists! no configuration changes, returning instance instead..');
                         return Proto.getInstance(config.instance);
                     } else {
                         CONFIG = config;
@@ -251,39 +247,29 @@ var Modulr = (function(window, app){
                 } else {
                     var instance = new Modulr(config);
 
-                    if (instance.config) {
-                        delete instance.config; // remote instantiation access
-                    }
-
-                    if (instance.getInstance) {
-                        delete instance.getInstance; // remove call from instances
-                    }
-
-                    if (instance.loadPackageList) {
-                        delete instance.loadPackageList; // remove pacakge list loader - this is only for pre-run
-                    }
-
-                    if (instance.setGlobalCacheParam) {
-                        delete instance.setGlobalCacheParam; // remove setter - only for pre-run
-                    }
-
-                    if (instance.setGlobalCacheCond) {
-                        delete instance.setGlobalCacheCond; // remove setter - only for pre-run
-                    }
-
-                    if (instance.setExecuteListener) {
-                        delete instance.setExecuteListener; // remove custom execute listener
+                    // remove from application instances
+                    // - remote instantiation access
+                    // - remove call from instances
+                    // - remove pacakge list loader - this is only for pre-run
+                    // - remove setter - only for pre-run
+                    // - remove custom execute listener
+                    var remove = ['config', 'getInstance', 'loadPackageList', 'setGlobalCacheParam', 'setGlobalCacheCond', 'setExecuteListener'];
+                    for (var i = 0; i < remove.length; i++) {
+                        var id = remove[i];
+                        if (instance[id]) {
+                            delete instance[id];
+                        }
                     }
 
                     // add custom package loader
                     instance.loadPackage = function(packages, callback) {
-                        if (typeof callback !== "function") {
-                            throwError("loadPackage() requires a callback!");
+                        if (typeof callback !== 'function') {
+                            throwError('loadPackage() requires a callback!');
                         }
-                        if (!isArray(packages) && typeof packages === "object") {
+                        if (!isArray(packages) && typeof packages === 'object') {
                             loadPackages(packages, callback.apply(callback, Proto.require));
                         } else {
-                            throwError("cannot load package list.");
+                            throwError('cannot load package list.');
                         }
                     };
 
@@ -298,7 +284,7 @@ var Modulr = (function(window, app){
             Proto.execModule = function(id, callback) {
                 var module = getStack(id);
 
-                if (typeof callback !== "function") { return false; }
+                if (typeof callback !== 'function') { return false; }
 
                 if (!module) {
                     callback(null);
@@ -317,14 +303,14 @@ var Modulr = (function(window, app){
              * load the package/instances
              */
             Proto.loadPackageList = function(packages) {
-                if (!isArray(packages) && typeof packages === "object") {
+                if (!isArray(packages) && typeof packages === 'object') {
                     for (var id in packages) {
                         if (!INSTANCE_LIST[id]) {
                             INSTANCE_LIST[id] = packages[id];
                         }
                     }
                 } else {
-                    throwError("cannot load package list.");
+                    throwError('cannot load package list.');
                 }
             };
 
@@ -332,7 +318,7 @@ var Modulr = (function(window, app){
              * set a global static cache parameter
              */
             Proto.setGlobalCacheParam = function(val) {
-                if (typeof val === "string" || typeof val === "number") {
+                if (typeof val === 'string' || typeof val === 'number') {
                     GLOBAL_CACHE_PARAM_VAR = val;
                 }
             };
@@ -361,7 +347,7 @@ var Modulr = (function(window, app){
             };
 
             /**
-             * set ready callback for in-page execution if you don't want to use DOM_READY
+             * set ready callback for in-page execution if you don't want to use ON_READY
              */
             Proto.setReady = function() {
                 executeReadyState();
@@ -386,25 +372,25 @@ var Modulr = (function(window, app){
                 id = processDepsPath(id);
 
                 var stack = null,
-                    type = "module",
+                    type = 'module',
                     ext = isExtendedInstance(id);
                 // if extended instance call
                 if (ext) {
-                    if (ext.type === "module") {
+                    if (ext.type === 'module') {
                         stack = MODULR_STACK[ext.context].stack[ext.id];
-                    } else if (ext.type === "instance") {
+                    } else if (ext.type === 'instance') {
                         stack = MODULR_STACK[ext.context].instance;
-                        type = "instance";
+                        type = 'instance';
                     }
                 } else {
                     stack = STACK[id];
                 }
 
-                if (type === "module") {
+                if (type === 'module') {
                     if (stack && !stack.executed) {
-                        throwError("module not yet executed: '"+id+"'");
+                        throwError('module not yet executed:', id);
                     }
-                    stack = (stack) ? (typeof stack.factory !== "undefined") ? stack.factory : stack.exports : null;
+                    stack = (stack) ? (typeof stack.factory !== 'undefined') ? stack.factory : stack.exports : null;
                 }
 
                 return stack;
@@ -452,7 +438,7 @@ var Modulr = (function(window, app){
                 }
 
                 // replace double slash, remove prefix slash
-                deps = deps.replace(/\/\//g, "/").replace(/^\//, '');
+                deps = deps.replace(/\/\//g, '/').replace(/^\//, '');
                 return deps;
             }
 
@@ -492,23 +478,23 @@ var Modulr = (function(window, app){
                                     ext = isExtendedInstance(id);
 
                                 if (ext) { // if extended calls (calls to other packages/instances)
-                                    if (ext.type === "module") {
+                                    if (ext.type === 'module') {
                                         // extended modules are existing contexts
                                         getExtendedModule(id, function(extFactory){
-                                            args.push((typeof extFactory !== "undefined") ? extFactory : null);
+                                            args.push((typeof extFactory !== 'undefined') ? extFactory : null);
                                             getDeps();
                                         });
-                                    } else if (ext.type === "instance") { // if calling for the instance
+                                    } else if (ext.type === 'instance') { // if calling for the instance
                                         args.push(getExtendedInstance(ext.context));
                                         getDeps();
                                     }
-                                } else if (id === "require") {
+                                } else if (id === 'require') {
                                     args.push(Proto.require);
                                     getDeps();
-                                } else if (id === "define") {
+                                } else if (id === 'define') {
                                     args.push(Proto.define);
                                     getDeps();
-                                } else if (id === "exports") {
+                                } else if (id === 'exports') {
                                     args.push(STACK[moduleId].exports);
                                     getDeps();
                                 } else if (module  && !isShimModuleId(id)) { // module, but not a shim-defined module
@@ -534,7 +520,7 @@ var Modulr = (function(window, app){
                                     var src = self.getModulePath(id);
 
                                     loadScript(src, id, function(){
-                                        self.execModule("load", src, id, function(factory){
+                                        self.execModule('load', src, id, function(factory){
                                             args.push(factory);
                                             getDeps();
                                         });
@@ -556,20 +542,20 @@ var Modulr = (function(window, app){
                             callback(module.factory);
                         } else if (SHIM_QUEUE[src]) {
                             SHIM_QUEUE[src].push(function(){
-                                self.execModule("shim", null, id, function(factory){
+                                self.execModule('shim', null, id, function(factory){
                                     callback(factory);
                                 });
                             });
                         } else {
                             SHIM_QUEUE[src] = [function(){
-                                self.execModule("shim", null, id, function(factory){
+                                self.execModule('shim', null, id, function(factory){
                                     callback(factory);
                                 });
                             }];
 
                             loadScript(src, id, function(){
                                 if (!isExportsDefined(info.exports)) {
-                                    throwError("shim export not found for: '"+id+"'");
+                                    throwError('shim export not found for:', id);
                                 } else {
                                     processShimQueue(src);
                                 }
@@ -613,12 +599,12 @@ var Modulr = (function(window, app){
                             }
 
                         } else {
-                            log("loading external source: " + src);
+                            log('loading external source:', src);
 
                             callback({
                                 id: id,
                                 src: src,
-                                type: "external-script"
+                                type: 'external-script'
                             });
                         }
                     };
@@ -639,7 +625,7 @@ var Modulr = (function(window, app){
                     self.getModulePath = function(id) {
                         // base url - base instance path
                         var base = getContextBasePath(),
-                            url = setConfigPath(base,id) + ".js";
+                            url = setConfigPath(base,id) + '.js';
                         return url;
                     };
 
@@ -654,7 +640,7 @@ var Modulr = (function(window, app){
             }
 
             function getContextBasePath() {
-                return [rtrimSlash(CONFIG.baseDomain || getDomain()), ltrimSlash(CONFIG.baseUrl || getRelativePath())].join("/");
+                return [rtrimSlash(CONFIG.baseDomain || getDomain()), ltrimSlash(CONFIG.baseUrl || getRelativePath())].join('/');
             }
 
             function loadInstanceDeps(depsObj, callback) {
@@ -687,7 +673,7 @@ var Modulr = (function(window, app){
             }
 
             function getExtendedModule(id, callback) {
-                var sp = id.split(":"),
+                var sp = id.split(':'),
                     context = sp[0] || false,
                     moduleId = sp[1] || false;
 
@@ -708,7 +694,7 @@ var Modulr = (function(window, app){
                         });
                     }
                 } else {
-                    log(["Not initialized >> CONTEXT: ", context, " | module: ", moduleId].join(""));
+                    log(['Not initialized >> CONTEXT:', context, '| module:', moduleId].join(' '));
                     callback(null);
                 }
             }
@@ -717,27 +703,27 @@ var Modulr = (function(window, app){
                 if (MODULR_STACK[context]) {
                     return MODULR_STACK[context].instance;
                 } else {
-                    throwError("Error getting instance: " + context);
+                    throwError('Error getting instance:', context);
                 }
             }
 
             function isExtendedInstance(id) {
-                var found = (id.indexOf(":") > -1) ? true : false,
-                    sp = id.split(":"),
-                    context = sp[0] || false,
-                    moduleId = sp[1] || false,
+                var found = (id.indexOf(':') > -1) ? true : false,
                     ret = false;
 
                 if (found) {
+                    var sp = id.split(':'),
+                        context = sp[0] || false,
+                        moduleId = sp[1] || false;
                     // check if instance
-                    if (context === "getInstance" && moduleId) {
+                    if (context === 'getInstance' && moduleId) {
                         ret = {
-                            type: "instance",
+                            type: 'instance',
                             context: moduleId
                         };
                     } else if (context && moduleId) {
                         ret = {
-                            type: "module",
+                            type: 'module',
                             context: context,
                             id: moduleId
                         };
@@ -777,24 +763,16 @@ var Modulr = (function(window, app){
             function loadMasterFile(callback) {
 
                 if (!CONFIG.masterFile) {
-
                     callback();
-
                 } else {
-
-                    if (MASTER_FILE_LOADED.indexOf(CONFIG.masterFile) > -1) {
+                    var src = setPathSrc(CONFIG.masterFile);
+                    if (MASTER_FILE_LOADED.indexOf(src) > -1) {
                         callback();
                     } else {
-                        var src = setPathSrc(CONFIG.masterFile);
-                        // allow multiple master files
-                        if (!MASTER_FILE) {
-                            MASTER_FILE = [];
-                        }
-
                         if (MASTER_FILE.indexOf(src) === -1) {
                             MASTER_FILE.push(src);
-
                             loadScript(src, null, function(){
+                                MASTER_FILE_LOADED.push(src);
                                 callback();
                             });
                         } else {
@@ -816,7 +794,6 @@ var Modulr = (function(window, app){
                             // add to instance list
                             if (!INSTANCE_LIST[uid]) {
                                 // no more logs
-                                // log("please add this instance to the master package file: " + uid);
                                 INSTANCE_LIST[uid] = obj[uid];
                             }
                             arr.push({ uid:uid, src:obj[uid] });
@@ -828,12 +805,12 @@ var Modulr = (function(window, app){
                         for (var i = 0; i < packages.length; i++) {
                             var item = packages[i];
 
-                            if (typeof item === "string" && INSTANCE_LIST[item]) {
+                            if (typeof item === 'string' && INSTANCE_LIST[item]) {
                                 arr.push({ uid:item, src:INSTANCE_LIST[item] });
-                            } else if (typeof item === "object" && !isArray(item)) {
+                            } else if (typeof item === 'object' && !isArray(item)) {
                                 setPackageObj(item);
                             } else {
-                                throwError("cannot find package named: " + item);
+                                throwError('cannot find package named:', item);
                             }
                         }
                     } else { // legacy
@@ -871,7 +848,7 @@ var Modulr = (function(window, app){
                                         if (LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src]) {
                                             loadInstanceStackQueue(src);
                                         }
-                                    }, "instance");
+                                    }, 'instance');
                                 } else {
                                     if (!LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src]) { LOADED_INSTANCE_INCLUDES_STACK_QUEUE[src] = []; }
 
@@ -891,11 +868,11 @@ var Modulr = (function(window, app){
             function setPathSrc(src) {
                 var ret = src;
 
-                if (src.indexOf("http") !== 0) {
-                    if (src.indexOf("//") === 0) {
+                if (src.indexOf('http') !== 0) {
+                    if (src.indexOf('//') === 0) {
                         ret = addProtocol(src);
                     } else {
-                        ret = CONFIG.baseDomain + ((src.charAt(0) !== "/") ? "/" : "") + src;
+                        ret = CONFIG.baseDomain + ((src.charAt(0) !== '/') ? '/' : '') + src;
                     }
                 }
 
@@ -909,7 +886,7 @@ var Modulr = (function(window, app){
 
             // shim export
             function getShimExport(scope) {
-                 return window[scope.split(".")[0]];
+                 return window[scope.split('.')[0]];
             }
 
             /**
@@ -921,8 +898,8 @@ var Modulr = (function(window, app){
                 cacheInfo = cacheInfo || {};
 
                 var loaded = false,
-                    script = document.createElement("script"),
-                    scriptId = [CONTEXT || "", src].join("||"),
+                    script = document.createElement('script'),
+                    scriptId = [CONTEXT || '', src].join('||'),
                     noBrowserCache = cacheInfo.noCacheString || null,
                     customCacheCond = findCacheCond(src);
 
@@ -967,25 +944,25 @@ var Modulr = (function(window, app){
                 };
 
                 var onError = function() {
-                    throwError("error loading script: " + src);
+                    throwError('error loading script:', src);
                 };
 
                 var removeScriptListener = function() {
-                    removeListener(script, onLoad, "load", "onreadystatechange");
-                    removeListener(script, onError, "error");
+                    removeListener(script, onLoad, 'load', 'onreadystatechange');
+                    removeListener(script, onError, 'error');
                 };
 
                 if (id) {
-                    var idAttrName = "data-modulr-module";
+                    var idAttrName = 'data-modulr-module';
 
                     if (specType) {
-                        idAttrName = "data-modulr-loaded-inst";
+                        idAttrName = 'data-modulr-loaded-inst';
                     }
 
                     script.setAttribute(idAttrName, id);
                 }
 
-                script.setAttribute("data-modulr-context", CONTEXT);
+                script.setAttribute('data-modulr-context', CONTEXT);
 
                 // load once
                 if (LOADED_SCRIPTS[scriptId]) {
@@ -1000,8 +977,8 @@ var Modulr = (function(window, app){
                     callback(id);
                 }];
 
-                script.type = "text/javascript";
-                script.charset = "utf-8";
+                script.type = 'text/javascript';
+                script.charset = 'utf-8';
                 script.async = true;
 
                 if (script.attachEvent &&
@@ -1012,22 +989,22 @@ var Modulr = (function(window, app){
                     //in IE8, node.attachEvent does not have toString()
                     //Note the test for "[native code" with no closing brace, see:
                     //https://github.com/jrburke/requirejs/issues/273
-                    !(script.attachEvent.toString && script.attachEvent.toString().indexOf("[native code") < 0) &&
+                    !(script.attachEvent.toString && script.attachEvent.toString().indexOf('[native code') < 0) &&
                     !isOpera) {
 
-                    script.attachEvent("onreadystatechange", onLoad);
+                    script.attachEvent('onreadystatechange', onLoad);
                 } else {
-                    script.addEventListener("load", onLoad, false);
-                    script.addEventListener("error", onError, false);
+                    script.addEventListener('load', onLoad, false);
+                    script.addEventListener('error', onError, false);
                 }
 
                 script.src = (function(src){
                     var ret = src;
                     if (customCacheCond && noStore && queryParam) {
-                        ret = src + ((src.indexOf("?") > -1) ? "&" : "?") + ((queryParam) ? (queryParam + "=") : "") + (new Date()).getTime();
+                        ret = src + ((src.indexOf('?') > -1) ? '&' : '?') + ((queryParam) ? (queryParam + '=') : '') + (new Date()).getTime();
                     } else if ((CONFIG && CONFIG.cacheParam || GLOBAL_CACHE_PARAM_VAR) && !noBrowserCache) {
                         // if global cache var defined, used "v", if no custom param
-                        var param = (queryParam) ? queryParam : (typeof CONFIG.cacheParam === "string") ? CONFIG.cacheParam : (GLOBAL_CACHE_PARAM_VAR) ? "v" : "";
+                        var param = (queryParam) ? queryParam : (typeof CONFIG.cacheParam === 'string') ? CONFIG.cacheParam : (GLOBAL_CACHE_PARAM_VAR) ? 'v' : '';
                         // browser cache buster
                         var cb = (function(){
                             var res;
@@ -1043,11 +1020,11 @@ var Modulr = (function(window, app){
                             }
                             return res;
                         })();
-                        ret = src + ((src.indexOf("?") > -1) ? "&" : "?") + ((param) ? (param + "=") : "") + cb;
+                        ret = src + ((src.indexOf('?') > -1) ? '&' : '?') + ((param) ? (param + '=') : '') + cb;
                     }
                     return ret;
                 }(src));
-                document.getElementsByTagName("head")[0].appendChild(script);
+                document.getElementsByTagName('head')[0].appendChild(script);
             }
 
         }; // Modulr
@@ -1062,7 +1039,7 @@ var Modulr = (function(window, app){
         function getFactory(factory, deps) {
             var ret = null;
 
-            if (typeof factory === "function") {
+            if (typeof factory === 'function') {
                 ret = factory.apply(factory, deps);
             } else {
                 ret = factory;
@@ -1074,17 +1051,17 @@ var Modulr = (function(window, app){
          * check if shim exports is defined
          */
         function isExportsDefined(exports) {
-            var ex = exports.split("."),
+            var ex = exports.split('.'),
                 tmp = window[ex.shift()],
                 ret = false;
 
-            if (typeof tmp !== "undefined") {
+            if (typeof tmp !== 'undefined') {
                 ret = true;
 
                 if (ex.length > 0) {
                     while (ex.length > 0) {
                         tmp = tmp[ex.shift()];
-                        if (typeof tmp === "undefined") {
+                        if (typeof tmp === 'undefined') {
                             ret = false;
                             break;
                         }
@@ -1099,8 +1076,8 @@ var Modulr = (function(window, app){
          * validate module id
          */
         function isValidId(id) {
-            var str = (typeof id === "string") ? (id.replace(/\s+/gi, "")) : "";
-            return (str.length > 0 && str !== "require" && str !== "define" && str !== "exports") ? true : false;
+            var str = (typeof id === 'string') ? (id.replace(/\s+/gi, '')) : '';
+            return (str.length > 0 && str !== 'require' && str !== 'define' && str !== 'exports') ? true : false;
         }
 
         /**
@@ -1108,7 +1085,7 @@ var Modulr = (function(window, app){
          */
         function isValidContextId(id) {
             var invalid = /[^A-Za-z0-9_\-\.]/g.test(id);
-            return (typeof id === "string" && !invalid) ? true : false;
+            return (typeof id === 'string' && !invalid) ? true : false;
         }
 
         /**
@@ -1123,9 +1100,9 @@ var Modulr = (function(window, app){
          */
         function getRelativePath() {
             var loc = window.location,
-                path = loc.pathname.split("/");
+                path = loc.pathname.split('/');
             path.pop();
-            path = path.join("/") + "/";
+            path = path.join('/') + '/';
             return getDomain()+ path;
         }
 
@@ -1134,7 +1111,7 @@ var Modulr = (function(window, app){
          */
         function getDomain() {
             var loc = window.location;
-            return loc.protocol + "//" + (loc.host || loc.hostname);
+            return loc.protocol + '//' + (loc.host || loc.hostname);
         }
 
         /**
@@ -1143,7 +1120,7 @@ var Modulr = (function(window, app){
         function setConfigPath(baseUrl, path) {
             baseUrl = rtrimSlash(baseUrl);
             path = trimSlash(path);
-            return [baseUrl, path].join("/");
+            return [baseUrl, path].join('/');
         }
 
         /**
@@ -1152,8 +1129,8 @@ var Modulr = (function(window, app){
         function addProtocol(domain) {
             var ret = domain,
                 protocol = window.location.protocol;
-            if (domain.indexOf("http") !== 0) {
-                ret = protocol + ((domain.indexOf("//") !== 0) ? "//" : "") + domain;
+            if (domain.indexOf('http') !== 0) {
+                ret = protocol + ((domain.indexOf('//') !== 0) ? '//' : '') + domain;
             }
             return ret;
         }
@@ -1204,47 +1181,85 @@ var Modulr = (function(window, app){
         }
 
         function ltrimSlash(val) {
-            return (val.charAt(0) === "/") ? val.slice(1) : val;
+            return (val.charAt(0) === '/') ? val.slice(1) : val;
         }
 
         function rtrimSlash(val) {
-            return (val.charAt(val.length - 1) === "/") ? val.slice(0, val.length - 1) : val;
+            return (val.charAt(val.length - 1) === '/') ? val.slice(0, val.length - 1) : val;
         }
 
         function isArray(val) {
             val = val || false;
-            return Object.prototype.toString.call(val) === "[object Array]";
+            return Object.prototype.toString.call(val) === '[object Array]';
         }
 
         function log() {
-            var args = arguments;
-            if (typeof args[0] === "string") {
-                args[0] = [CONST.prefix, args[0]].join(" ");
-            }
-
-            if (window.console && window.console.log) {
-                try {
-                    return console.log.apply(console, args);
-                } catch(err) {
-                    console.log(args);
-                }
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(LOG_PREFIX);
+            try {
+                return window.console.log.apply(window.console, args);
+            } catch(err) {
+                window.console.log(args.join(' | '));
             }
         }
 
-        function throwError(str) {
-            str = [CONST.prefix, str].join(" ");
-            throw new Error(str);
+        function throwError() {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(LOG_PREFIX);
+            throw new Error(args.join(' '));
+        }
+
+        function UtilPromise(sender) {
+
+            var Proto = this,
+                _resolve = [],
+                _reject = null;
+
+            Proto.then = Proto.resolve = function(cb){
+                if (typeof cb === 'function') {
+                    _resolve.push(cb);
+                }
+                return this;
+            };
+
+            Proto.reject = function(cb) {
+                if (typeof cb === 'function') {
+                    _reject = cb;
+                }
+            };
+
+            sender(function(){
+                if (_resolve) {
+                    var args = Array.prototype.slice.call(arguments);
+                    while (_resolve.length > 0) {
+                        var fn = _resolve.shift();
+                        data = fn.apply(fn, args);
+                    }
+                }
+            }, function(data){
+                if (_reject) {
+                    var args = Array.prototype.slice.call(arguments);
+                    _reject.apply(_reject, args);
+                }
+            });
+        }
+
+        function OnReady(done) {
+            if (window.addEventListener) {
+                window.addEventListener('load', done, false);
+            } else if (window.attachEvent) {
+                window.attachEvent('onload', done);
+            } else {
+                var prev = window.onload;
+                window.onload = function(){
+                    prev();
+                    done();
+                };
+            }
         }
 
         return (new Modulr());
 
-    }(
-
-        (function(){
-            var domready=function(a){function b(a){for(n=1;a=d.shift();)a()}var c,d=[],e=!1,f=document,g=f.documentElement,h=g.doScroll,i="DOMContentLoaded",j="addEventListener",k="onreadystatechange",l="readyState",m=h?/^loaded|^c/:/^loaded|c/,n=m.test(f[l]);return f[j]&&f[j](i,c=function(){f.removeEventListener(i,c,e),b()},e),h&&f.attachEvent(k,c=function(){/^c/.test(f[l])&&(f.detachEvent(k,c),b())}),ready=h?function(a){self!=top?n?a():d.push(a):function(){try{g.doScroll("left")}catch(b){return setTimeout(function(){ready(a)},50)}a()}()}:function(a){n?a():d.push(a)}}();
-            return domready;
-        }())
-
-    ))
+    }())
 
 ));
